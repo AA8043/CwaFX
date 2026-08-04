@@ -1,6 +1,5 @@
 package org.a8043.cwaFX;
 
-import cn.hutool.core.text.NamingCase;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,17 +7,11 @@ import org.a8043.cwaFX.annotations.bean.Bean;
 import org.a8043.cwaFX.events.NewBeanEvent;
 import org.a8043.cwaFX.window.Window;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -68,12 +61,6 @@ public class AppContext {
     public List<Object> getBeans(Class<?> clazz) {
         return beans.values().stream()
             .filter(obj -> obj.getClass() == clazz)
-            .collect(Collectors.toList());
-    }
-
-    public static List<Method> getMethods(Class<?> clazz, Class<? extends Annotation> annotation) {
-        return Stream.of(clazz.getDeclaredMethods())
-            .filter(method -> method.isAnnotationPresent(annotation))
             .collect(Collectors.toList());
     }
 

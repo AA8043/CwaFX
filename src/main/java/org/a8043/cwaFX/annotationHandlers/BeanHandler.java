@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.a8043.cwaFX.AppContext;
 import org.a8043.cwaFX.BeanKey;
 import org.a8043.cwaFX.FieldAccessor;
+import org.a8043.cwaFX.Util;
 import org.a8043.cwaFX.annotations.bean.Autowired;
 import org.a8043.cwaFX.annotations.bean.Bean;
 import org.a8043.cwaFX.annotations.bean.Initialize;
@@ -14,8 +15,6 @@ import org.a8043.cwaFX.events.DestroyEvent;
 import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.InitEvent;
 import org.a8043.cwaFX.events.NewBeanEvent;
-
-import java.lang.reflect.InvocationTargetException;
 
 @Slf4j
 @AutoService(AnnotationHandler.class)
@@ -30,27 +29,13 @@ public class BeanHandler implements AnnotationHandler<Bean> {
                 } else if (init.getSequence() == 1) {
                     injectDependency(clazz, context);
                 } else if (init.getSequence() == 2) {
-                    AppContext.getMethods(clazz, Initialize.class).forEach(method ->
-                        context.getBeans(clazz).forEach(bean -> {
-                            method.setAccessible(true);
-                            try {
-                                method.invoke(bean);
-                            } catch (IllegalAccessException | InvocationTargetException e) {
-                                log.error("Error invoking @Initialize method: {}", method.getName(), e);
-                            }
-                        }));
+                    Util.getMethods(clazz, Initialize.class).forEach(method ->
+                        context.getBeans(clazz).forEach(bean -> Util.invokeMethod(method, bean)));
                 }
             }
 
             case DestroyEvent ignored -> context.getClasses().getMethods(clazz, PreDestroy.class).forEach(method ->
-                context.getBeans(clazz).forEach(bean -> {
-                    method.setAccessible(true);
-                    try {
-                        method.invoke(bean);
-                    } catch (IllegalAccessException | InvocationTargetException e) {
-                        log.error("Error invoking @PreDestroy method: {}", method.getName(), e);
-                    }
-                }));
+                context.getBeans(clazz).forEach(bean -> Util.invokeMethod(method, bean)));
 
             case NewBeanEvent newBean -> {
                 if (newBean.getObject().getClass().equals(clazz)) {
