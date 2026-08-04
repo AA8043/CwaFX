@@ -1,5 +1,6 @@
 plugins {
-    java
+    `java-library`
+    `maven-publish`
     id("io.freefair.lombok") version "8.6"
     id("org.openjfx.javafxplugin") version "0.1.0"
 }
@@ -15,6 +16,18 @@ javafx {
     modules = listOf("javafx.controls", "javafx.fxml")
 }
 
+publishing {
+    repositories {
+        mavenLocal()
+    }
+
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
+}
+
 group = "org.a8043.cwaFX"
 version = "1.0"
 
@@ -23,13 +36,16 @@ repositories {
 }
 
 dependencies {
-    implementation("org.slf4j:slf4j-api:2.0.18")
-    implementation("org.apache.logging.log4j:log4j-core:2.26.0")
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.26.0")
+    api("io.github.typhon0:AnimateFX:1.3.0")
 
-    val hutoolVersion = "5.8.38"
-    implementation("cn.hutool:hutool-core:$hutoolVersion")
-    implementation("cn.hutool:hutool-json:$hutoolVersion")
+    api("org.slf4j:slf4j-api:2.0.18")
+    api("org.apache.logging.log4j:log4j-core:2.26.0")
+    api("org.apache.logging.log4j:log4j-slf4j2-impl:2.26.0")
+
+    val hutoolVersion = "5.8.40"
+    api("cn.hutool:hutool-core:$hutoolVersion")
+    api("cn.hutool:hutool-json:$hutoolVersion")
+    api("cn.hutool:hutool-extra:$hutoolVersion")
 
     implementation("com.google.auto.service:auto-service:1.1.1")
     annotationProcessor("com.google.auto.service:auto-service:1.1.1")

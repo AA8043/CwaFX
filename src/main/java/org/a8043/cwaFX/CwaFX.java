@@ -1,14 +1,19 @@
 package org.a8043.cwaFX;
 
 import cn.hutool.core.util.ClassUtil;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.a8043.cwaFX.annotationHandlers.AnnotationHandler;
 import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.InitEvent;
+import org.a8043.cwaFX.window.WindowCreator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
 
 import java.lang.annotation.Annotation;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 @Slf4j
 public class CwaFX {
@@ -19,13 +24,19 @@ public class CwaFX {
         annotationHandlers.forEach(ANNOTATION_HANDLERS::add);
     }
 
+    @Getter
+    private static CwaFX instance;
+
     public static void start(Class<?> clazz, String[] args) {
-        new CwaFX(clazz, args).startApp();
+        (instance = new CwaFX(clazz, args)).startApp();
     }
 
+    @Getter
     private final Class<?> clazz;
     @Getter
     private final AppContext context;
+    @Getter(AccessLevel.PACKAGE)
+    private final CountDownLatch fxLoadLatch = new CountDownLatch(1);
 
     public CwaFX(Class<?> clazz, String[] args) {
         this.clazz = clazz;
@@ -35,8 +46,17 @@ public class CwaFX {
     private void startApp() {
         log.info("Starting application with class: {}", clazz.getName());
 
+        context.addBean(new BeanKey(CwaFX.class, "CwaFX"), this);
+        context.addBean(new BeanKey(AppContext.class, "AppContext"), context);
+        context.addBean(new BeanKey(WindowCreator.class, "WindowCreator"), new WindowCreator(context));
+
         log.info("Starting JavaFX application...");
         new Thread(() -> FXApp.launch(FXApp.class, context.getArgs())).start();
+        try {
+            fxLoadLatch.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
         log.info("Scanning classes...");
         ClassUtil.scanPackage(clazz.getPackageName()).forEach(c ->
@@ -53,9 +73,12 @@ public class CwaFX {
 
         log.info("Initializing beans...");
         notifyEvent(new InitEvent(3));
+
+        log.info("Done starting application.");
     }
 
-    private void notifyEvent(Event event) {
+    void notifyEvent(Event event) {
+        log.debug("Notifying event: {}", event);
         context.getClasses().getClassMap().forEach((clazz, annotations) -> annotations.forEach(annotation ->
             ANNOTATION_HANDLERS.stream()
                 .filter(handler -> handler.getType().isAssignableFrom(annotation.annotationType()))

@@ -16,6 +16,9 @@ public class Classes {
     private final Map<Class<?>, List<Annotation>> classMap = new HashMap<>();
 
     public <T extends Annotation> T getAnnotation(Class<?> clazz, Class<T> type) {
+        if (!classMap.containsKey(clazz)) {
+            return null;
+        }
         return classMap.get(clazz).stream()
             .filter(a -> a.annotationType().equals(type))
             .findFirst()

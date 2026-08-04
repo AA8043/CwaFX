@@ -5,6 +5,8 @@ import javafx.stage.Stage;
 
 public class FXApp extends Application {
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage stage) throws Exception {
+        I18n.init(CwaFX.getInstance().getClazz());
+        CwaFX.getInstance().getFxLoadLatch().countDown();
     }
 }
