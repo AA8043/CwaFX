@@ -32,8 +32,7 @@ public class BeanHandler implements AnnotationHandler<Bean> {
                 } else if (init.getSequence() == 1) {
                     injectDependency(clazz, context);
                 } else if (init.getSequence() == 2) {
-                    Util.getMethods(clazz, Initialize.class).forEach(method ->
-                        context.getBeans(clazz).forEach(bean -> Util.invokeMethod(method, bean)));
+                    context.getBeans(clazz).forEach(bean -> initializeBean(clazz, bean, context));
                 }
             }
 
@@ -43,6 +42,9 @@ public class BeanHandler implements AnnotationHandler<Bean> {
             case NewBeanEvent newBean -> {
                 if (newBean.getObject().getClass().equals(clazz)) {
                     injectDependency(clazz, context);
+                    if (context.isInitializationComplete()) {
+                        initializeBean(clazz, newBean.getObject(), context);
+                    }
                 }
 
                 if (context.getInjectionFailures().containsKey(newBean.getKey())) {
@@ -76,6 +78,12 @@ public class BeanHandler implements AnnotationHandler<Bean> {
                     throw new RuntimeException(e);
                 }
             }));
+    }
+
+    private static void initializeBean(Class<?> clazz, Object bean, AppContext context) {
+        if (context.markBeanInitialized(bean)) {
+            Util.getMethods(clazz, Initialize.class).forEach(method -> Util.invokeMethod(method, bean));
+        }
     }
 
     @Override

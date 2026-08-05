@@ -52,6 +52,7 @@ public class CwaFX {
 
     private void startApp() {
         log.info("Starting application with class: {}", clazz.getName());
+        
         try {
             BeanUtil.fillBeanWithMap(new JSONObject(IoUtil.readUtf8(clazz.getResource("/app.json").openStream())),
                 config, true);
@@ -71,6 +72,7 @@ public class CwaFX {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        context.addBean(new BeanKey(FXApp.class, "WindowCreator"), FXApp.getInstance());
 
         log.info("Scanning classes...");
         ClassUtil.scanPackage(clazz.getPackageName()).forEach(c ->
@@ -98,5 +100,9 @@ public class CwaFX {
                 .filter(handler -> handler.getType().isAssignableFrom(annotation.annotationType()))
                 .map(handler -> (AnnotationHandler<Annotation>) handler)
                 .forEach(handler -> handler.onEvent(clazz, annotation, event, context))));
+
+        if (event instanceof InitEvent init && init.getSequence() == 2) {
+            context.completeInitialization();
+        }
     }
 }

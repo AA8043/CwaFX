@@ -8,8 +8,10 @@ import org.a8043.cwaFX.events.NewBeanEvent;
 import org.a8043.cwaFX.window.Window;
 
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -24,6 +26,8 @@ public class AppContext {
     private final Map<BeanKey, Object> beans = new ConcurrentHashMap<>();
     private final Map<String, Window> windows = new HashMap<>();
     private final Map<BeanKey, List<FieldAccessor>> injectionFailures = new HashMap<>();
+    private final Set<Object> initializedBeans = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    private volatile boolean initializationComplete;
 
     public Object getBean(Class<?> clazz, String name) {
         if (name.isEmpty()) {
@@ -65,7 +69,15 @@ public class AppContext {
     }
 
     public void addBean(BeanKey key, Object bean) {
-            beans.put(key, bean);
+        beans.put(key, bean);
         cwaFX.notifyEvent(new NewBeanEvent(key, bean));
+    }
+
+    void completeInitialization() {
+        initializationComplete = true;
+    }
+
+    public synchronized boolean markBeanInitialized(Object bean) {
+        return initializedBeans.add(bean);
     }
 }
