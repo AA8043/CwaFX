@@ -23,7 +23,7 @@ public class AppContext {
     private final Classes classes = new Classes();
     private final Map<BeanKey, Object> beans = new ConcurrentHashMap<>();
     private final Map<String, Window> windows = new HashMap<>();
-    private final Map<BeanKey, FieldAccessor> injectionFailures = new HashMap<>();
+    private final Map<BeanKey, List<FieldAccessor>> injectionFailures = new HashMap<>();
 
     public Object getBean(Class<?> clazz, String name) {
         if (name.isEmpty()) {

@@ -16,6 +16,9 @@ import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.InitEvent;
 import org.a8043.cwaFX.events.NewBeanEvent;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Slf4j
 @AutoService(AnnotationHandler.class)
 public class BeanHandler implements AnnotationHandler<Bean> {
@@ -43,8 +46,8 @@ public class BeanHandler implements AnnotationHandler<Bean> {
                 }
 
                 if (context.getInjectionFailures().containsKey(newBean.getKey())) {
-                    FieldAccessor field = context.getInjectionFailures().remove(newBean.getKey());
-                    field.set(newBean.getObject());
+                    List<FieldAccessor> field = context.getInjectionFailures().remove(newBean.getKey());
+                    field.forEach(f -> f.set(newBean.getObject()));
                 }
             }
 
@@ -61,8 +64,8 @@ public class BeanHandler implements AnnotationHandler<Bean> {
                 Object dependency = context.getBean(field.getType(), configuredName);
                 if (dependency == null) {
                     log.debug("Inj fail: {}, ({})", dependencyName, field.getType());
-                    context.getInjectionFailures().put(new BeanKey(field.getType(), dependencyName),
-                        new FieldAccessor(field, bean));
+                    context.getInjectionFailures().computeIfAbsent(new BeanKey(field.getType(), dependencyName),
+                        k -> new ArrayList<>()).add(new FieldAccessor(field, bean));
                     return;
                 }
 
