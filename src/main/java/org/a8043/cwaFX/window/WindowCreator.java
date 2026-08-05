@@ -10,8 +10,10 @@ import org.a8043.cwaFX.I18n;
 public class WindowCreator {
     private final AppContext context;
 
-    public Window create(String name, String titleKey) {
+    public Window create(String name, String titleKey, int width, int height) {
         Stage stage = new Stage();
+        stage.setWidth(width);
+        stage.setHeight(height);
         stage.setTitle(I18n.get(titleKey));
         Window window = new Window(stage);
         context.addBean(new BeanKey(Window.class, name), window);

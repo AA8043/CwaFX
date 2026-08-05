@@ -1,6 +1,12 @@
 package org.a8043.cwaFX;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.io.resource.ResourceUtil;
+import cn.hutool.core.stream.StreamUtil;
 import cn.hutool.core.util.ClassUtil;
+import cn.hutool.core.util.URLUtil;
+import cn.hutool.json.JSONObject;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -8,9 +14,8 @@ import org.a8043.cwaFX.annotationHandlers.AnnotationHandler;
 import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.InitEvent;
 import org.a8043.cwaFX.window.WindowCreator;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.LoggerContext;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -35,6 +40,8 @@ public class CwaFX {
     private final Class<?> clazz;
     @Getter
     private final AppContext context;
+    @Getter
+    private final AppConfig config = new AppConfig();
     @Getter(AccessLevel.PACKAGE)
     private final CountDownLatch fxLoadLatch = new CountDownLatch(1);
 
@@ -45,6 +52,13 @@ public class CwaFX {
 
     private void startApp() {
         log.info("Starting application with class: {}", clazz.getName());
+        try {
+            BeanUtil.fillBeanWithMap(new JSONObject(IoUtil.readUtf8(clazz.getResource("/app.json").openStream())),
+                config, true);
+        } catch (Exception e) {
+            log.error("Error reading app.json configuration file.", e);
+            return;
+        }
 
         context.addBean(new BeanKey(CwaFX.class, "CwaFX"), this);
         context.addBean(new BeanKey(AppContext.class, "AppContext"), context);

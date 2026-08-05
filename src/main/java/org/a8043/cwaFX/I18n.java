@@ -13,8 +13,7 @@ public class I18n {
     @Getter
     private static ResourceBundle langBundle;
 
-    static void init(Class<?> clazz) {
-        Locale locale = Locale.getDefault();
+    static void load(Class<?> clazz, Locale locale) {
         log.info("Language: {}", locale.getDisplayName());
         try {
             langBundle = ResourceBundle.getBundle("languages.messages", locale, clazz.getModule());

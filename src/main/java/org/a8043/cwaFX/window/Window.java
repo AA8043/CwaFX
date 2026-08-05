@@ -78,10 +78,10 @@ public class Window {
         Label label = new Label(text);
         label.setWrapText(true);
         label.setFont(new Font(12));
-        Button button = new Button("确定");
+        Button button = new Button(I18n.get("modal.ok"));
         VBox box = new VBox(label, button);
         box.setAlignment(Pos.CENTER);
-        ModalController<VBox> modalController = showModal(I18n.get("info"), box);
+        ModalController<VBox> modalController = showModal(I18n.get("modal.info"), box);
         button.setOnAction(e -> modalController.close());
     }
 }

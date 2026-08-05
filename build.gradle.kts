@@ -29,7 +29,7 @@ publishing {
 }
 
 group = "org.a8043.cwaFX"
-version = "1.0"
+version = "1.0.0"
 
 repositories {
     mavenCentral()
