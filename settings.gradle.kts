@@ -1,1 +1,1 @@
-rootProject.name = "CwaFX"
+rootProject.name = "cwafx"
