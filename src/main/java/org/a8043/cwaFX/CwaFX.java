@@ -14,6 +14,7 @@ import org.a8043.cwaFX.annotationHandlers.AnnotationHandler;
 import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.InitEvent;
 import org.a8043.cwaFX.tasks.Tasks;
+import org.a8043.cwaFX.userEvent.EventPublisher;
 import org.a8043.cwaFX.window.WindowCreator;
 
 import java.io.IOException;
@@ -65,6 +66,7 @@ public class CwaFX {
         context.addBean(new BeanKey(CwaFX.class, "CwaFX"), this);
         context.addBean(new BeanKey(AppContext.class, "AppContext"), context);
         context.addBean(new BeanKey(WindowCreator.class, "WindowCreator"), new WindowCreator(context));
+        context.addBean(new BeanKey(EventPublisher.class, "EventPublisher"), new EventPublisher(this));
 
         log.info("Starting JavaFX application...");
         new Thread(() -> FXApp.launch(FXApp.class, context.getArgs())).start();
@@ -95,7 +97,7 @@ public class CwaFX {
         log.info("Done starting application.");
     }
 
-    void notifyEvent(Event event) {
+    public void notifyEvent(Event event) {
         log.debug("Notifying event: {}", event);
         context.getClasses().getClassMap().forEach((clazz, annotations) -> annotations.forEach(annotation ->
             ANNOTATION_HANDLERS.stream()

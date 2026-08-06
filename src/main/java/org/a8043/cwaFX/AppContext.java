@@ -7,6 +7,7 @@ import org.a8043.cwaFX.annotations.bean.Bean;
 import org.a8043.cwaFX.events.NewBeanEvent;
 import org.a8043.cwaFX.window.Window;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -26,7 +27,7 @@ public class AppContext {
     private final Map<BeanKey, Object> beans = new ConcurrentHashMap<>();
     private final Map<String, Window> windows = new HashMap<>();
     private final Map<BeanKey, List<FieldAccessor>> injectionFailures = new HashMap<>();
-    private final Set<Object> initializedBeans = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<Object> initializedBeans = Collections.newSetFromMap(new IdentityHashMap<>());
     private volatile boolean initializationComplete;
 
     public Object getBean(Class<?> clazz, String name) {

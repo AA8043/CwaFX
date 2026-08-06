@@ -19,13 +19,13 @@ public class Util {
             .collect(Collectors.toList());
     }
 
-    public static void invokeMethod(Method method, Object object) {
+    public static void invokeMethod(Method method, Object object, Object... args) {
         method.setAccessible(true);
         CountDownLatch latch = new CountDownLatch(1);
 
         Runnable runnable = () -> {
             try {
-                method.invoke(object);
+                method.invoke(object, (Object[]) args);
             } catch (Exception e) {
                 log.error("Error invoking method: {}", method.getName(), e);
             } finally {
