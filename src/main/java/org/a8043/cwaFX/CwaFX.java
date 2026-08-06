@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.a8043.cwaFX.annotationHandlers.AnnotationHandler;
 import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.InitEvent;
+import org.a8043.cwaFX.tasks.Tasks;
 import org.a8043.cwaFX.window.WindowCreator;
 
 import java.io.IOException;
@@ -72,7 +73,8 @@ public class CwaFX {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        context.addBean(new BeanKey(FXApp.class, "WindowCreator"), FXApp.getInstance());
+        context.addBean(new BeanKey(FXApp.class, "FXApp"), FXApp.getInstance());
+        context.addBean(new BeanKey(Tasks.class, "Tasks"), new Tasks());
 
         log.info("Scanning classes...");
         ClassUtil.scanPackage(clazz.getPackageName()).forEach(c ->
