@@ -7,5 +7,5 @@ import lombok.Setter;
 @Getter
 @Setter(AccessLevel.PRIVATE)
 public class AppConfig {
-    private String defaultLanguage;
+    private String defaultLanguage = "en_US";
 }

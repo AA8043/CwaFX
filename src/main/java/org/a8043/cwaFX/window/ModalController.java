@@ -2,11 +2,12 @@ package org.a8043.cwaFX.window;
 
 import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class ModalController<N extends Node> {
     private final Window window;
     @Getter

@@ -13,7 +13,7 @@ public class FXApp extends Application {
     @Getter(AccessLevel.PACKAGE)
     private static FXApp instance;
 
-    private FXApp() {
+    public FXApp() {
         instance = this;
     }
 
