@@ -1,6 +1,8 @@
 plugins {
     `java-library`
     `maven-publish`
+    signing
+    id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
     id("io.freefair.lombok") version "8.6"
     id("org.openjfx.javafxplugin") version "0.1.0"
 }
@@ -9,6 +11,9 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
+
+    withSourcesJar()
+    withJavadocJar()
 }
 
 javafx {
@@ -19,6 +24,7 @@ javafx {
 publishing {
     repositories {
         mavenLocal()
+
         maven {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/AA8043/CwaFX")
@@ -32,11 +38,60 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["java"])
+
+            pom {
+                name.set("cwafx")
+                description.set("A JavaFX framework")
+                url.set("https://github.com/AA8043/CwaFX")
+
+                licenses {
+                    license {
+                        name.set("GNU General Public License v3.0")
+                        url.set("https://www.gnu.org/licenses/gpl-3.0.en.html")
+                    }
+                }
+
+                developers {
+                    developer {
+                        id.set(project.findProperty("developerId") as String)
+                        name.set(project.findProperty("developerName") as String)
+                        email.set(project.findProperty("developerEmail") as String)
+                    }
+                }
+
+                scm {
+                    connection.set("scm:git:git://github.com/AA8043/CwaFX.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/AA8043/CwaFX.git")
+                    url.set("https://github.com/AA8043/CwaFX")
+                }
+            }
         }
     }
 }
 
-group = "org.a8043.cwaFX"
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+            username.set(project.findProperty("centralUsername") as String)
+            password.set(project.findProperty("centralPassword") as String)
+        }
+    }
+}
+
+signing {
+    val signingKey = project.findProperty("signingKey") as String?
+    val signingPassword = project.findProperty("signingPassword") as String?
+    if (signingKey != null && signingPassword != null) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    } else {
+        useGpgCmd()
+    }
+    sign(publishing.publications["maven"])
+}
+
+group = "io.github.aa8043"
 version = "1.0.0"
 
 repositories {
