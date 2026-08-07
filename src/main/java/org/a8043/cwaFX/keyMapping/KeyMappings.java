@@ -24,6 +24,10 @@ public class KeyMappings {
     }
 
     public void add(KeyMapping keyMapping) {
+        String key = json.getStr(keyMapping.getName());
+        if (key != null) {
+            keyMapping = new KeyMapping(keyMapping.getName(), KeyCombination.valueOf(key), keyMapping.getOnlyIn());
+        }
         keyMappings.add(keyMapping);
     }
 
