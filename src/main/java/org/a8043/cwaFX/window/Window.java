@@ -10,22 +10,24 @@ import animatefx.animation.FadeOutDown;
 import animatefx.animation.FadeOutLeft;
 import animatefx.animation.FadeOutRight;
 import animatefx.animation.FadeOutUp;
+import cn.hutool.core.util.ReflectUtil;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
+import javafx.scene.control.*;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -34,6 +36,7 @@ import org.a8043.cwaFX.I18n;
 import org.a8043.cwaFX.annotations.bean.Bean;
 
 import java.util.Objects;
+import java.util.function.Function;
 
 @Bean(single = false)
 public class Window {
@@ -42,12 +45,16 @@ public class Window {
     private final Stage stage;
     @Getter
     private final StackPane pane = new StackPane();
+    private final Scene scene;
     private VBox notificationContainer;
 
     Window(WindowCreator windowCreator, Stage stage) {
         this.windowCreator = windowCreator;
         this.stage = stage;
-        stage.setScene(new Scene(pane));
+        scene = new Scene(pane);
+        stage.setScene(scene);
+        updateStyle();
+        setup(pane);
     }
 
     public void show() {
@@ -146,7 +153,6 @@ public class Window {
     private VBox getNotificationContainer(NotificationLocation location) {
         if (notificationContainer == null) {
             notificationContainer = new VBox(10);
-            notificationContainer.getStyleClass().add("notification-container");
             notificationContainer.setPadding(new Insets(16));
             notificationContainer.setPickOnBounds(false);
             notificationContainer.setMaxWidth(Region.USE_PREF_SIZE);
@@ -183,9 +189,9 @@ public class Window {
 
         HBox header = new HBox(6);
         header.setAlignment(Pos.CENTER_LEFT);
-            header.getChildren().add(new ImageView() {{
-                getStyleClass().add("notification-icon-" + name);
-            }});
+        header.getChildren().add(new ImageView() {{
+            getStyleClass().add("notification-icon-" + name);
+        }});
         header.getChildren().addAll(titleLabel, spacer, closeButton);
 
         Label contentLabel = new Label(content);
@@ -201,10 +207,14 @@ public class Window {
         return card;
     }
 
+    void updateStyle() {
+        scene.getStylesheets().setAll(windowCreator.getStyles());
+    }
+
     private static boolean isTop(NotificationLocation location) {
         return location == NotificationLocation.TOP_LEFT
-            || location == NotificationLocation.TOP_RIGHT
-            || location == NotificationLocation.TOP_CENTER;
+               || location == NotificationLocation.TOP_RIGHT
+               || location == NotificationLocation.TOP_CENTER;
     }
 
     private static Pos toPos(NotificationLocation location) {
@@ -234,5 +244,60 @@ public class Window {
             case TOP_CENTER -> new FadeOutUp(node);
             case BOTTOM_CENTER -> new FadeOutDown(node);
         };
+    }
+
+    private static void setup(Node node) {
+        Function<ObservableList<Node>, Void> setupAndListen = list -> {
+            list.forEach(Window::setup);
+            list.addListener((ListChangeListener<Node>) change -> {
+                while (change.next()) {
+                    if (change.wasAdded()) {
+                        change.getAddedSubList().forEach(Window::setup);
+                    }
+                }
+            });
+            return null;
+        };
+
+        Function<TabPane, Void> setupTabPane = pane -> {
+            pane.getTabs().forEach(tab -> setup(tab.getContent()));
+            pane.getTabs().addListener((ListChangeListener<Tab>) change -> {
+                while (change.next()) {
+                    if (change.wasAdded()) {
+                        change.getAddedSubList().forEach(tab -> setup(tab.getContent()));
+                    }
+                }
+            });
+            return null;
+        };
+
+        if (node instanceof TabPane pane) {
+            setupTabPane.apply(pane);
+        } else if (node instanceof SplitPane pane) {
+            setupAndListen.apply(pane.getItems());
+        } else if (node instanceof Pane pane) {
+            setupAndListen.apply(pane.getChildren());
+        }
+
+        if (node instanceof Button button) {
+            ObservableList<Node> children = ReflectUtil.invoke(button, "getChildren");
+            button.setOnMousePressed(event -> {
+                Circle ripple = new Circle(event.getX(), event.getY(), 0, Color.WHITE);
+                ripple.setOpacity(0.5);
+                Rectangle clip = new Rectangle(button.getWidth(), button.getHeight());
+                clip.setArcWidth(10);
+                clip.setArcHeight(10);
+                button.setClip(clip);
+                children.add(ripple);
+                Timeline timeline = new Timeline(new KeyFrame(Duration.ZERO,
+                    new KeyValue(ripple.radiusProperty(), 0),
+                    new KeyValue(ripple.opacityProperty(), 0.6)),
+                    new KeyFrame(Duration.millis(300), new KeyValue(ripple.radiusProperty(), Math.sqrt(
+                        Math.pow(button.getWidth(), 2) + Math.pow(button.getHeight(), 2))),
+                        new KeyValue(ripple.opacityProperty(), 0)));
+                timeline.setOnFinished(e -> children.remove(ripple));
+                timeline.play();
+            });
+        }
     }
 }

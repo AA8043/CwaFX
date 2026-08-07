@@ -1,6 +1,9 @@
 package org.a8043.cwaFX.window;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.stage.Stage;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -8,15 +11,19 @@ import org.a8043.cwaFX.AppContext;
 import org.a8043.cwaFX.BeanKey;
 import org.a8043.cwaFX.I18n;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @RequiredArgsConstructor
+@Getter
+@Setter
 public class WindowCreator {
+    @Getter(AccessLevel.PACKAGE)
     private final AppContext context;
-    @Getter
-    @Setter
+    private final ObservableList<String> styles = FXCollections.observableArrayList();
     private NotificationLocation notificationLocation = NotificationLocation.BOTTOM_RIGHT;
-    @Getter
-    @Setter
     private int notificationTime = 3000;
+    private final List<Window> windows = new ArrayList<>();
 
     public Window create(String name, String titleKey, int width, int height) {
         Stage stage = new Stage();
@@ -24,7 +31,23 @@ public class WindowCreator {
         stage.setHeight(height);
         stage.setTitle(I18n.get(titleKey));
         Window window = new Window(this, stage);
+        windows.add(window);
         context.addBean(new BeanKey(Window.class, name), window);
         return window;
+    }
+
+    public void setStyles(String... styles) {
+        this.styles.setAll(styles);
+        windows.forEach(Window::updateStyle);
+    }
+
+    public void addStyle(String style) {
+        styles.add(style);
+        windows.forEach(Window::updateStyle);
+    }
+
+    public void removeStyle(String style) {
+        styles.remove(style);
+        windows.forEach(Window::updateStyle);
     }
 }
