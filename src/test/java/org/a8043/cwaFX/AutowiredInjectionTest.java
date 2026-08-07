@@ -2,16 +2,20 @@ package org.a8043.cwaFX;
 
 import javafx.scene.Node;
 import javafx.scene.shape.Rectangle;
+import org.a8043.cwaFX.annotationHandlers.AnnotationHandler;
 import org.a8043.cwaFX.annotations.bean.Autowired;
 import org.a8043.cwaFX.annotations.bean.Bean;
 import org.a8043.cwaFX.annotations.bean.Initialize;
 import org.a8043.cwaFX.events.InitEvent;
+import org.a8043.cwaFX.events.NewBeanEvent;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AutowiredInjectionTest {
     @Test
@@ -48,6 +52,48 @@ class AutowiredInjectionTest {
         assertEquals(1, consumer.initializeCount);
     }
 
+    @Test
+    void registersBeanBeforePublishingNewBeanEvent() throws ReflectiveOperationException {
+        CwaFX cwaFX = new CwaFX(EventReentrantBean.class, new String[0]);
+        AppContext context = cwaFX.getContext();
+        context.getClasses().getClassMap().put(EventReentrantBean.class,
+            Arrays.stream(EventReentrantBean.class.getAnnotations()).toList());
+
+        AtomicReference<Object> observedBean = new AtomicReference<>();
+        AnnotationHandler<Bean> handler = new AnnotationHandler<>() {
+            @Override
+            public void onEvent(Class<?> clazz, Bean annotation, org.a8043.cwaFX.events.Event event,
+                                AppContext eventContext) {
+                if (event instanceof NewBeanEvent newBean && clazz == EventReentrantBean.class) {
+                    observedBean.set(eventContext.getBean(EventReentrantBean.class, ""));
+                }
+            }
+
+            @Override
+            public Class<Bean> getType() {
+                return Bean.class;
+            }
+        };
+
+        List<AnnotationHandler<?>> handlers = annotationHandlers();
+        handlers.add(handler);
+        try {
+            Object bean = context.getBean(EventReentrantBean.class, "");
+
+            assertNotNull(bean);
+            assertSame(bean, observedBean.get());
+        } finally {
+            handlers.remove(handler);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<AnnotationHandler<?>> annotationHandlers() throws ReflectiveOperationException {
+        Field field = CwaFX.class.getDeclaredField("ANNOTATION_HANDLERS");
+        field.setAccessible(true);
+        return (List<AnnotationHandler<?>>) field.get(null);
+    }
+
     @Bean
     public static class Consumer {
         @Autowired
@@ -66,5 +112,9 @@ class AutowiredInjectionTest {
             initializedNode = node;
             initializeCount++;
         }
+    }
+
+    @Bean
+    public static class EventReentrantBean {
     }
 }

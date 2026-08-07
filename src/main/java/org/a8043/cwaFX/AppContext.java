@@ -7,12 +7,7 @@ import org.a8043.cwaFX.annotations.bean.Bean;
 import org.a8043.cwaFX.events.NewBeanEvent;
 import org.a8043.cwaFX.window.Window;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -52,15 +47,25 @@ public class AppContext {
         }
 
         BeanKey key = new BeanKey(clazz, keyName);
-        return beans.computeIfAbsent(key, k -> {
-            try {
-                Object object = clazz.getConstructor().newInstance();
-                cwaFX.notifyEvent(new NewBeanEvent(new BeanKey(clazz, name), object));
-                return object;
-            } catch (Exception e) {
-                return null;
-            }
-        });
+        Object existing = beans.get(key);
+        if (existing != null) {
+            return existing;
+        }
+
+        final Object created;
+        try {
+            created = clazz.getConstructor().newInstance();
+        } catch (Exception e) {
+            return null;
+        }
+
+        Object bean = beans.putIfAbsent(key, created);
+        if (bean != null) {
+            return bean;
+        }
+
+        cwaFX.notifyEvent(new NewBeanEvent(new BeanKey(clazz, name), created));
+        return created;
     }
 
     public List<Object> getBeans(Class<?> clazz) {
