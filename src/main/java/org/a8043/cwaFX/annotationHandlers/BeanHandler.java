@@ -8,10 +8,7 @@ import org.a8043.cwaFX.BeanKey;
 import org.a8043.cwaFX.FieldAccessor;
 import org.a8043.cwaFX.Util;
 import org.a8043.cwaFX.annotations.bean.*;
-import org.a8043.cwaFX.events.DestroyEvent;
-import org.a8043.cwaFX.events.Event;
-import org.a8043.cwaFX.events.InitEvent;
-import org.a8043.cwaFX.events.NewBeanEvent;
+import org.a8043.cwaFX.events.*;
 import org.a8043.cwaFX.userEvent.UserEventWrapper;
 
 import java.util.ArrayList;
@@ -54,6 +51,12 @@ public class BeanHandler implements AnnotationHandler<Bean> {
             case UserEventWrapper wrapper -> Util.getMethods(clazz, OnEvent.class).forEach(method -> {
                 if (method.getAnnotation(OnEvent.class).value().equals(wrapper.getEvent().getClass())) {
                     context.getBeans(clazz).forEach(bean -> Util.invokeMethod(method, bean, wrapper.getEvent()));
+                }
+            });
+
+            case KeyPressEvent key -> Util.getMethods(clazz, OnKeyPressed.class).forEach(method -> {
+                if (method.getAnnotation(OnKeyPressed.class).value().equals(key.getName())) {
+                    context.getBeans(clazz).forEach(bean -> Util.invokeMethod(method, bean));
                 }
             });
 

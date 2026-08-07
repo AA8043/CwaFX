@@ -1,10 +1,10 @@
 package org.a8043.cwaFX.events;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.EqualsAndHashCode;
+import lombok.Value;
 
-@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@Value
 public class InitEvent extends Event {
-    @Getter
-    private final int sequence;
+    int sequence;
 }

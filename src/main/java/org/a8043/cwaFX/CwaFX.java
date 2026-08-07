@@ -1,11 +1,10 @@
 package org.a8043.cwaFX;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.convert.AbstractConverter;
+import cn.hutool.core.convert.ConverterRegistry;
 import cn.hutool.core.io.IoUtil;
-import cn.hutool.core.io.resource.ResourceUtil;
-import cn.hutool.core.stream.StreamUtil;
 import cn.hutool.core.util.ClassUtil;
-import cn.hutool.core.util.URLUtil;
 import cn.hutool.json.JSONObject;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -13,13 +12,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.a8043.cwaFX.annotationHandlers.AnnotationHandler;
 import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.InitEvent;
+import org.a8043.cwaFX.keyMapping.KeyMappings;
 import org.a8043.cwaFX.tasks.Tasks;
 import org.a8043.cwaFX.userEvent.EventPublisher;
 import org.a8043.cwaFX.window.WindowCreator;
 
-import java.io.IOException;
+import java.io.File;
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ServiceLoader;
 import java.util.concurrent.CountDownLatch;
 
 @Slf4j
@@ -67,6 +70,7 @@ public class CwaFX {
         context.addBean(new BeanKey(AppContext.class, "AppContext"), context);
         context.addBean(new BeanKey(WindowCreator.class, "WindowCreator"), new WindowCreator(context));
         context.addBean(new BeanKey(EventPublisher.class, "EventPublisher"), new EventPublisher(this));
+        context.addBean(new BeanKey(KeyMappings.class, "KeyMappings"), new KeyMappings());
 
         log.info("Starting JavaFX application...");
         new Thread(() -> FXApp.launch(FXApp.class, context.getArgs())).start();
@@ -108,5 +112,19 @@ public class CwaFX {
         if (event instanceof InitEvent init && init.getSequence() == 2) {
             context.completeInitialization();
         }
+    }
+
+    static {
+        String userHome = System.getProperty("user.home");
+
+        ConverterRegistry.getInstance().putCustom(File.class, new AbstractConverter<File>() {
+            @Override
+            protected File convertInternal(Object value) {
+                if (value instanceof String str) {
+                    return new File(str.replace("~", userHome));
+                }
+                return null;
+            }
+        });
     }
 }

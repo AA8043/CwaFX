@@ -33,7 +33,7 @@ public class Util {
             }
         };
 
-        if (method.isAnnotationPresent(OnFXThread.class)) {
+        if (method.isAnnotationPresent(OnFXThread.class) && !Platform.isFxApplicationThread()) {
             Platform.runLater(runnable);
         } else {
             runnable.run();

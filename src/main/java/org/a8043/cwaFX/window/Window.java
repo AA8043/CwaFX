@@ -1,15 +1,6 @@
 package org.a8043.cwaFX.window;
 
-import animatefx.animation.AnimationFX;
-import animatefx.animation.FadeIn;
-import animatefx.animation.FadeInDown;
-import animatefx.animation.FadeInLeft;
-import animatefx.animation.FadeInRight;
-import animatefx.animation.FadeInUp;
-import animatefx.animation.FadeOutDown;
-import animatefx.animation.FadeOutLeft;
-import animatefx.animation.FadeOutRight;
-import animatefx.animation.FadeOutUp;
+import animatefx.animation.*;
 import cn.hutool.core.util.ReflectUtil;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -22,8 +13,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -34,6 +25,8 @@ import javafx.util.Duration;
 import lombok.Getter;
 import org.a8043.cwaFX.I18n;
 import org.a8043.cwaFX.annotations.bean.Bean;
+import org.a8043.cwaFX.events.KeyPressEvent;
+import org.a8043.cwaFX.keyMapping.KeyMappings;
 
 import java.util.Objects;
 import java.util.function.Function;
@@ -52,6 +45,15 @@ public class Window {
         this.windowCreator = windowCreator;
         this.stage = stage;
         scene = new Scene(pane);
+        ((KeyMappings) windowCreator.getContext().getBean(KeyMappings.class, "KeyMappings"))
+            .getKeyMappings().forEach(keyMapping -> scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+                if (keyMapping.getKey().match(event)) {
+                    if (keyMapping.getOnlyIn() != null && scene.getFocusOwner() != keyMapping.getOnlyIn()) {
+                        return;
+                    }
+                    windowCreator.getContext().getCwaFX().notifyEvent(new KeyPressEvent(keyMapping.getName()));
+                }
+            }));
         stage.setScene(scene);
         updateStyle();
         setup(pane);

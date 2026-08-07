@@ -16,7 +16,7 @@ import java.io.File;
 public class SettingsHandler implements AnnotationHandler<Settings> {
     @Override
     public void onEvent(Class<?> clazz, Settings annotation, Event event, AppContext context) {
-        File file = new File(annotation.value());
+        File file = new File(context.getCwaFX().getConfig().getSettingsBaseDir(), annotation.value());
         if (event instanceof InitEvent e && e.getSequence() == 1) {
             Object bean = context.getBean(clazz, "");
             if (file.exists()) {
