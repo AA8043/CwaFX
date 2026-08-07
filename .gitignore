@@ -12,3 +12,7 @@
 *.iws
 *.iml
 *.ipr
+
+# Other
+
+/release-description/

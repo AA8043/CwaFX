@@ -24,15 +24,6 @@ javafx {
 publishing {
     repositories {
         mavenLocal()
-
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/AA8043/CwaFX")
-            credentials {
-                username = System.getenv("USERNAME")
-                password = System.getenv("TOKEN")
-            }
-        }
     }
 
     publications {
@@ -92,13 +83,16 @@ signing {
 }
 
 group = "io.github.aa8043"
-version = "1.1.0"
+version = "1.2.0"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    implementation("net.java.dev.jna:jna:5.14.0")
+    implementation("net.java.dev.jna:jna-platform:5.14.0")
+
     api("io.github.typhon0:AnimateFX:1.3.0")
 
     api("org.slf4j:slf4j-api:2.0.18")
