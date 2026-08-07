@@ -2,6 +2,7 @@ package org.a8043.cwaFX.tasks;
 
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 
@@ -24,7 +25,9 @@ public class TasksView extends ListView<Task<?>> {
                             getStyleClass().add("cancel-task-button");
                             setOnAction(e -> item.cancel());
                         }}
-                    ));
+                    ) {{
+                        setPadding(new Insets(0, 4, 0, 0));
+                    }});
                 } else {
                     setGraphic(null);
                 }

@@ -8,4 +8,5 @@ import lombok.Setter;
 @Setter(AccessLevel.PRIVATE)
 public class AppConfig {
     private String defaultLanguage = "en_US";
+    private int taskThreadPoolSize = 2;
 }

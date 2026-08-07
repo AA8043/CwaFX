@@ -76,7 +76,7 @@ public class CwaFX {
             throw new RuntimeException(e);
         }
         context.addBean(new BeanKey(FXApp.class, "FXApp"), FXApp.getInstance());
-        context.addBean(new BeanKey(Tasks.class, "Tasks"), new Tasks());
+        context.addBean(new BeanKey(Tasks.class, "Tasks"), new Tasks(this));
 
         log.info("Scanning classes...");
         ClassUtil.scanPackage(clazz.getPackageName()).forEach(c ->
