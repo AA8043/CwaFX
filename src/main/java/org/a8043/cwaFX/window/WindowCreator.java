@@ -1,5 +1,6 @@
 package org.a8043.cwaFX.window;
 
+import cn.hutool.core.io.resource.ResourceUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.stage.Stage;
@@ -18,9 +19,12 @@ import java.util.List;
 @Getter
 @Setter
 public class WindowCreator {
+    public static final String LIGHT_STYLE = ResourceUtil.getResource("defaultStyles/light.css").toExternalForm();
+    public static final String DARK_STYLE = ResourceUtil.getResource("defaultStyles/dark.css").toExternalForm();
+
     @Getter(AccessLevel.PACKAGE)
     private final AppContext context;
-    private final ObservableList<String> styles = FXCollections.observableArrayList();
+    private final ObservableList<String> styles = FXCollections.observableArrayList(LIGHT_STYLE);
     private NotificationLocation notificationLocation = NotificationLocation.BOTTOM_RIGHT;
     private int notificationTime = 3000;
     private final List<Window> windows = new ArrayList<>();
