@@ -25,14 +25,14 @@ public class AppContext {
     private final Set<Object> initializedBeans = Collections.newSetFromMap(new IdentityHashMap<>());
     private volatile boolean initializationComplete;
 
-    public Object getBean(Class<?> clazz, String name) {
+    public <T> T getBean(Class<T> clazz, String name) {
         if (name.isEmpty()) {
             List<Object> beansOfType = beans.entrySet().stream()
                 .filter(entry -> entry.getKey().getClazz().equals(clazz))
                 .map(Map.Entry::getValue)
                 .toList();
             if (beansOfType.size() == 1) {
-                return beansOfType.getFirst();
+                return (T) beansOfType.getFirst();
             }
         }
 
@@ -49,7 +49,7 @@ public class AppContext {
         BeanKey key = new BeanKey(clazz, keyName);
         Object existing = beans.get(key);
         if (existing != null) {
-            return existing;
+            return (T) existing;
         }
 
         final Object created;
@@ -61,11 +61,11 @@ public class AppContext {
 
         Object bean = beans.putIfAbsent(key, created);
         if (bean != null) {
-            return bean;
+            return (T) bean;
         }
 
         cwaFX.notifyEvent(new NewBeanEvent(new BeanKey(clazz, name), created));
-        return created;
+        return (T) created;
     }
 
     public List<Object> getBeans(Class<?> clazz) {

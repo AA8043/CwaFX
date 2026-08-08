@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
 
 @Slf4j
 public class CwaFX {
@@ -49,6 +50,7 @@ public class CwaFX {
     private final AppConfig config = new AppConfig();
     @Getter(AccessLevel.PACKAGE)
     private final CountDownLatch fxLoadLatch = new CountDownLatch(1);
+    private final List<Consumer<Event>> onEventList = new ArrayList<>();
 
     public CwaFX(Class<?> clazz, String[] args) {
         this.clazz = clazz;
@@ -70,7 +72,7 @@ public class CwaFX {
         context.addBean(new BeanKey(AppContext.class, "AppContext"), context);
         context.addBean(new BeanKey(WindowCreator.class, "WindowCreator"), new WindowCreator(context));
         context.addBean(new BeanKey(EventPublisher.class, "EventPublisher"), new EventPublisher(this));
-        context.addBean(new BeanKey(KeyMappings.class, "KeyMappings"), new KeyMappings());
+        context.addBean(new BeanKey(KeyMappings.class, "KeyMappings"), new KeyMappings(this));
 
         log.info("Starting JavaFX application...");
         new Thread(() -> FXApp.launch(FXApp.class, context.getArgs())).start();
@@ -108,10 +110,15 @@ public class CwaFX {
                 .filter(handler -> handler.getType().isAssignableFrom(annotation.annotationType()))
                 .map(handler -> (AnnotationHandler<Annotation>) handler)
                 .forEach(handler -> handler.onEvent(clazz, annotation, event, context))));
+        onEventList.forEach(c -> c.accept(event));
 
         if (event instanceof InitEvent init && init.getSequence() == 2) {
             context.completeInitialization();
         }
+    }
+
+    public void addOnEvent(Consumer<Event> onEvent) {
+        onEventList.add(onEvent);
     }
 
     static {

@@ -1,22 +1,25 @@
 package org.a8043.cwaFX.window;
 
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
+import cn.hutool.json.JSONObject;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.a8043.cwaFX.AppContext;
 import org.a8043.cwaFX.BeanKey;
+import org.a8043.cwaFX.CwaFX;
 import org.a8043.cwaFX.I18n;
+import org.a8043.cwaFX.events.DestroyEvent;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-@RequiredArgsConstructor
 @Getter
 @Setter
 public class WindowCreator {
@@ -28,14 +31,46 @@ public class WindowCreator {
     private final ObservableList<String> styles = FXCollections.observableArrayList(LIGHT_STYLE);
     private NotificationLocation notificationLocation = NotificationLocation.BOTTOM_RIGHT;
     private int notificationTime = 3000;
-    private static final List<Window> windows = new ArrayList<>();
+    private final List<Window> windows = new ArrayList<>();
+    private JSONObject statusJson;
 
-    public Window create(String name, String titleKey, int width, int height) {
+    public WindowCreator(AppContext context) {
+        this.context = context;
+
+        File statusFile = new File(context.getCwaFX().getConfig().getSettingsBaseDir(), "windowStatus.json");
+        if (statusFile.exists()) {
+            statusJson = new JSONObject(FileUtil.readUtf8String(statusFile));
+        } else {
+            statusJson = new JSONObject();
+        }
+        context.getCwaFX().addOnEvent(e -> {
+            if (e instanceof DestroyEvent) {
+                FileUtil.writeUtf8String(statusJson.toString(), statusFile);
+            }
+        });
+    }
+
+    void updateStatusJson(Window window) {
+        statusJson.set(window.getName(), window.getStatus());
+    }
+
+    public Window create(String name, String titleKey, int defaultWidth, int defaultHeight) {
         Stage stage = new Stage();
-        stage.setWidth(width);
-        stage.setHeight(height);
         stage.setTitle(I18n.get(titleKey));
-        Window window = new Window(this, stage);
+
+        if (statusJson.containsKey(name)) {
+            WindowStatus status = statusJson.getJSONObject(name).toBean(WindowStatus.class);
+            stage.setX(status.getX());
+            stage.setY(status.getY());
+            stage.setWidth(status.getWidth());
+            stage.setHeight(status.getHeight());
+            stage.setMaximized(status.isMaximized());
+        } else {
+            stage.setWidth(defaultWidth);
+            stage.setHeight(defaultHeight);
+        }
+
+        Window window = new Window(this, name, stage);
         windows.add(window);
         context.addBean(new BeanKey(Window.class, name), window);
         return window;
@@ -57,6 +92,7 @@ public class WindowCreator {
     }
 
     public static Window findByScene(Scene scene) {
-        return windows.stream().filter(window -> window.getStage().getScene() == scene).findFirst().orElse(null);
+        return CwaFX.getInstance().getContext().getBean(WindowCreator.class, "WindowCreator").getWindows()
+            .stream().filter(window -> window.getStage().getScene() == scene).findFirst().orElse(null);
     }
 }

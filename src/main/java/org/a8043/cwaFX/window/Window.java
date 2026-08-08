@@ -35,17 +35,45 @@ import java.util.function.Function;
 public class Window {
     private final WindowCreator windowCreator;
     @Getter
+    private final String name;
+    @Getter
     private final Stage stage;
     @Getter
     private final StackPane pane = new StackPane();
     private final Scene scene;
     private VBox notificationContainer;
+    @Getter
+    private final WindowStatus status;
 
-    Window(WindowCreator windowCreator, Stage stage) {
+    Window(WindowCreator windowCreator, String name, Stage stage) {
         this.windowCreator = windowCreator;
+        this.name = name;
         this.stage = stage;
         scene = new Scene(pane);
-        ((KeyMappings) windowCreator.getContext().getBean(KeyMappings.class, "KeyMappings"))
+        status = new WindowStatus(stage.getWidth(), stage.getHeight(), stage.getX(), stage.getY(), stage.isMaximized());
+
+        stage.widthProperty().addListener((obs, oldVal, newVal) -> {
+            windowCreator.updateStatusJson(this);
+            status.setWidth(newVal.doubleValue());
+        });
+        stage.heightProperty().addListener((obs, oldVal, newVal) -> {
+            windowCreator.updateStatusJson(this);
+            status.setHeight(newVal.doubleValue());
+        });
+        stage.xProperty().addListener((obs, oldVal, newVal) -> {
+            status.setX(newVal.doubleValue());
+            windowCreator.updateStatusJson(this);
+        });
+        stage.yProperty().addListener((obs, oldVal, newVal) -> {
+            status.setY(newVal.doubleValue());
+            windowCreator.updateStatusJson(this);
+        });
+        stage.maximizedProperty().addListener((obs, oldVal, newVal) -> {
+            status.setMaximized(newVal);
+            windowCreator.updateStatusJson(this);
+        });
+
+        windowCreator.getContext().getBean(KeyMappings.class, "KeyMappings")
             .getKeyMappings().forEach(keyMapping -> scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
                 if (keyMapping.getKey().match(event)) {
                     if (keyMapping.getOnlyIn() != null && scene.getFocusOwner() != keyMapping.getOnlyIn()) {
@@ -54,6 +82,7 @@ public class Window {
                     windowCreator.getContext().getCwaFX().notifyEvent(new KeyPressEvent(keyMapping.getName()));
                 }
             }));
+
         stage.setScene(scene);
         updateStyle();
         setup(pane);

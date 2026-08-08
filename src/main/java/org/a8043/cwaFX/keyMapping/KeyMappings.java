@@ -4,6 +4,8 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.json.JSONObject;
 import javafx.scene.input.KeyCombination;
 import lombok.Getter;
+import org.a8043.cwaFX.CwaFX;
+import org.a8043.cwaFX.events.DestroyEvent;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -15,12 +17,18 @@ public class KeyMappings {
     private final List<KeyMapping> keyMappings = new ArrayList<>();
     private final JSONObject json;
 
-    public KeyMappings() {
+    public KeyMappings(CwaFX cwaFX) {
         if (file.exists()) {
             json = new JSONObject(FileUtil.readUtf8String(file));
         } else {
             json = new JSONObject();
         }
+
+        cwaFX.addOnEvent(e -> {
+            if (e instanceof DestroyEvent) {
+                FileUtil.writeUtf8String(json.toString(), file);
+            }
+        });
     }
 
     public void add(KeyMapping keyMapping) {
@@ -39,6 +47,5 @@ public class KeyMappings {
         keyMappings.remove(mapping);
         keyMappings.add(new KeyMapping(name, key, mapping != null ? mapping.getOnlyIn() : null));
         json.set(name, key.getName());
-        FileUtil.writeUtf8String(json.toString(), file);
     }
 }
