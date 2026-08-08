@@ -816,3 +816,36 @@
 .material-text-field:mtf-error .mtf-helper {
     -fx-text-fill: -mtf-error;
 }
+
+/* 表单 */
+
+.form {
+    -fx-alignment: center;
+}
+
+.form-item {
+    -fx-alignment: top-left;
+}
+
+.form-item-label {
+    -fx-font-size: 14px;
+    -fx-text-fill: #333333;
+}
+
+.form-item-helper {
+    -fx-font-size: 12px;
+    -fx-text-fill: #757575;
+}
+
+.form-item:form-error .form-item-label,
+.form-item:form-error .form-item-helper {
+    -fx-text-fill: #b00020;
+}
+
+.form-input:form-error {
+    -fx-border-color: #b00020;
+}
+
+.form-submit-button {
+    -fx-alignment: center;
+}

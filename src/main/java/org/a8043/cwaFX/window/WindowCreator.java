@@ -3,6 +3,7 @@ package org.a8043.cwaFX.window;
 import cn.hutool.core.io.resource.ResourceUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.Scene;
 import javafx.stage.Stage;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -27,7 +28,7 @@ public class WindowCreator {
     private final ObservableList<String> styles = FXCollections.observableArrayList(LIGHT_STYLE);
     private NotificationLocation notificationLocation = NotificationLocation.BOTTOM_RIGHT;
     private int notificationTime = 3000;
-    private final List<Window> windows = new ArrayList<>();
+    private static final List<Window> windows = new ArrayList<>();
 
     public Window create(String name, String titleKey, int width, int height) {
         Stage stage = new Stage();
@@ -53,5 +54,9 @@ public class WindowCreator {
     public void removeStyle(String style) {
         styles.remove(style);
         windows.forEach(Window::updateStyle);
+    }
+
+    public static Window findByScene(Scene scene) {
+        return windows.stream().filter(window -> window.getStage().getScene() == scene).findFirst().orElse(null);
     }
 }

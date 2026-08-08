@@ -96,6 +96,7 @@ public class GreetingService {
 
 - [`docs/quick-start.md`](docs/quick-start.md)：从依赖、资源到第一个窗口
 - [`docs/components-and-lifecycle.md`](docs/components-and-lifecycle.md)：Bean、注入、生命周期和事件注解
+- [`docs/forms.md`](docs/forms.md)：动态表单、校验、提交事件和 FXML 声明
 - [`docs/interface-and-tasks.md`](docs/interface-and-tasks.md)：窗口、FXML、模态框、通知和后台任务
 - [`docs/configuration-and-i18n.md`](docs/configuration-and-i18n.md)：`app.json`、设置文件、语言资源和快捷键
 

@@ -30,7 +30,7 @@ public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
                 URL url = annotation.fxml().isEmpty() ? clazz.getResource(clazz.getSimpleName() + ".fxml") :
                     ResourceUtil.getResource(annotation.fxml());
                 FXMLLoader loader = new FXMLLoader(url);
-                loader.setResources(I18n.getLangBundle());
+                loader.setResources(I18n.getBundle());
                 loader.setControllerFactory(c -> e.getObject());
                 String name = annotation.value().isEmpty() ? clazz.getSimpleName() + "Node" : annotation.value();
                 try {

@@ -18,6 +18,7 @@ public @interface FxmlView {
 
     /**
      * Specifies the path to the FXML file for the view.
+     *
      * @return the path to the FXML file
      */
     String fxml() default "";

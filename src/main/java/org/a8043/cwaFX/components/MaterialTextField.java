@@ -4,12 +4,11 @@ import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.*;
 import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Region;
 import javafx.scene.transform.Scale;
@@ -17,6 +16,11 @@ import javafx.util.Duration;
 import lombok.Getter;
 
 public class MaterialTextField extends Region {
+    public enum Type {
+        NORMAL,
+        PASSWORD
+    }
+
     private static final PseudoClass PSEUDO_FOCUSED = PseudoClass.getPseudoClass("mtf-focused");
     private static final PseudoClass PSEUDO_FILLED = PseudoClass.getPseudoClass("mtf-filled");
     private static final PseudoClass PSEUDO_ERROR = PseudoClass.getPseudoClass("mtf-error");
@@ -28,7 +32,7 @@ public class MaterialTextField extends Region {
     private static final Duration ANIM_DURATION = Duration.millis(150);
 
     @Getter
-    private final TextField textField = new TextField();
+    private TextField textField;
     private final Label floatingLabel = new Label();
     private final Label helperLabel = new Label();
     private final Region baseLine = new Region();
@@ -38,6 +42,8 @@ public class MaterialTextField extends Region {
 
     @Getter
     private final BooleanProperty error = new SimpleBooleanProperty(false);
+    private final StringProperty text = new SimpleStringProperty(this, "text", "");
+    private final ObjectProperty<Type> type = new SimpleObjectProperty<>(this, "type", Type.NORMAL);
 
     private double floatTranslateY = 0;
     private boolean floating = false;
@@ -49,7 +55,6 @@ public class MaterialTextField extends Region {
 
     public MaterialTextField(String labelText) {
         getStyleClass().add("material-text-field");
-        textField.getStyleClass().add("mtf-input");
         floatingLabel.getStyleClass().add("mtf-label");
         helperLabel.getStyleClass().add("mtf-helper");
         baseLine.getStyleClass().add("mtf-base-line");
@@ -61,15 +66,47 @@ public class MaterialTextField extends Region {
 
         focusLine.setScaleX(0);
 
+        replaceTextField(new TextField());
         getChildren().addAll(baseLine, focusLine, textField, floatingLabel, helperLabel);
 
-        textField.focusedProperty().addListener((o, was, is) -> onFocusChanged(is));
-        textField.textProperty().addListener((o, ol, ne) -> refreshFilled());
+        text.addListener((o, ol, ne) -> refreshFilled());
+        type.addListener((o, oldType, newType) -> replaceTextField(createTextField(newType)));
         error.addListener((o, ol, ne) -> pseudoClassStateChanged(PSEUDO_ERROR, ne));
 
         setOnMousePressed(e -> textField.requestFocus());
 
         refreshFilled();
+    }
+
+    private TextField createTextField(Type inputType) {
+        return inputType == Type.PASSWORD ? new PasswordField() : new TextField();
+    }
+
+    private void replaceTextField(TextField newTextField) {
+        TextField oldTextField = textField;
+        boolean wasFocused = oldTextField != null && oldTextField.isFocused();
+        int anchor = oldTextField == null ? 0 : oldTextField.getAnchor();
+        int caretPosition = oldTextField == null ? 0 : oldTextField.getCaretPosition();
+
+        if (oldTextField != null) {
+            oldTextField.textProperty().unbindBidirectional(text);
+            getChildren().remove(oldTextField);
+        }
+
+        newTextField.getStyleClass().add("mtf-input");
+        newTextField.textProperty().bindBidirectional(text);
+        newTextField.focusedProperty().addListener((o, was, focused) -> onFocusChanged(focused));
+        textField = newTextField;
+
+        if (getChildren().size() >= 2) {
+            getChildren().add(2, newTextField);
+        }
+
+        newTextField.selectRange(Math.min(anchor, newTextField.getLength()),
+            Math.min(caretPosition, newTextField.getLength()));
+        if (wasFocused) {
+            newTextField.requestFocus();
+        }
     }
 
     private void onFocusChanged(boolean focused) {
@@ -79,14 +116,14 @@ public class MaterialTextField extends Region {
     }
 
     private void refreshFilled() {
-        boolean filled = textField.getText() != null && !textField.getText().isEmpty();
+        boolean filled = text.get() != null && !text.get().isEmpty();
         pseudoClassStateChanged(PSEUDO_FILLED, filled);
         updateFloatingState();
     }
 
     private void updateFloatingState() {
         boolean shouldFloat = textField.isFocused()
-                              || (textField.getText() != null && !textField.getText().isEmpty());
+                              || (text.get() != null && !text.get().isEmpty());
         if (shouldFloat != floating) {
             floating = shouldFloat;
             animateLabel(floating);
@@ -174,15 +211,27 @@ public class MaterialTextField extends Region {
     }
 
     public StringProperty textProperty() {
-        return textField.textProperty();
+        return text;
     }
 
     public String getText() {
-        return textField.getText();
+        return text.get();
     }
 
     public void setText(String text) {
-        textField.setText(text);
+        this.text.set(text);
+    }
+
+    public ObjectProperty<Type> typeProperty() {
+        return type;
+    }
+
+    public Type getType() {
+        return type.get();
+    }
+
+    public void setType(Type type) {
+        this.type.set(type == null ? Type.NORMAL : type);
     }
 
     public StringProperty labelTextProperty() {

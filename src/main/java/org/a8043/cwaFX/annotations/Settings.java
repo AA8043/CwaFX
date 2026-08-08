@@ -12,6 +12,7 @@ import java.lang.annotation.*;
 public @interface Settings {
     /**
      * Specifies the path to the settings file.
+     *
      * @return the path to the settings file
      */
     String value();

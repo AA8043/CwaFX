@@ -57,7 +57,7 @@ public class CwaFX {
 
     private void startApp() {
         log.info("Starting application with class: {}", clazz.getName());
-        
+
         try {
             BeanUtil.fillBeanWithMap(new JSONObject(IoUtil.readUtf8(clazz.getResource("/app.json").openStream())),
                 config, true);

@@ -14,6 +14,7 @@ import java.lang.annotation.*;
 public @interface OnEvent {
     /**
      * Specifies the event class that this method should listen to.
+     *
      * @return the event class
      */
     Class<? extends Event> value();
