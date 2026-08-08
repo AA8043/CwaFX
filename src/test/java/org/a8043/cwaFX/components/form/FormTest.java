@@ -11,6 +11,7 @@ import org.a8043.cwaFX.components.MaterialTextField;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
@@ -22,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FormTest {
@@ -127,6 +130,77 @@ class FormTest {
             assertEquals("secret", field.getText());
             assertEquals(MaterialTextField.Type.PASSWORD, field.getType());
             assertTrue(field.getTextField().getStyleClass().contains("password-field"));
+            return null;
+        });
+    }
+
+    @Test
+    void materialTextFieldUpdatesLabelsErrorStateAndNullType() throws Exception {
+        onFx(() -> {
+            MaterialTextField field = new MaterialTextField("original");
+            field.setLabelText("updated");
+            field.setHelperText("help");
+            field.setError(true);
+            field.setType(null);
+
+            assertEquals("updated", field.getLabelText());
+            assertEquals("help", field.getHelperText());
+            assertTrue(field.isError());
+            assertTrue(field.getPseudoClassStates().contains(javafx.css.PseudoClass.getPseudoClass("mtf-error")));
+            assertEquals(MaterialTextField.Type.NORMAL, field.getType());
+            return null;
+        });
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void submitsValuesFromStandardControlsAndRequiresCheckboxSelection() throws Exception {
+        onFx(() -> {
+            Form form = new Form();
+            AtomicReference<FormSubmitEvent> submitted = new AtomicReference<>();
+            form.setOnSubmit(submitted::set);
+
+            FormItem choice = new FormItem();
+            choice.setType(ItemType.COMBO_BOX);
+            choice.getOptions().addAll("one", "two");
+            FormItem accepted = new FormItem();
+            accepted.setType(ItemType.CHECK_BOX);
+            accepted.setRequired(true);
+            FormItem date = new FormItem();
+            date.setType(ItemType.DATE);
+            form.getItems().addAll(choice, accepted, date);
+
+            ((ComboBox<String>) choice.getControl()).setValue("two");
+            ((DatePicker) date.getControl()).setValue(LocalDate.of(2026, 8, 8));
+            assertFalse(form.submit());
+            assertTrue(((CheckBox) accepted.getControl()).getPseudoClassStates()
+                .contains(javafx.css.PseudoClass.getPseudoClass("form-error")));
+
+            ((CheckBox) accepted.getControl()).setSelected(true);
+            assertTrue(form.submit());
+            assertArrayEquals(new Object[]{"two", true, LocalDate.of(2026, 8, 8)}, submitted.get().getValues());
+            return null;
+        });
+    }
+
+    @Test
+    void rebuildPreservesValuesAndClearsControlsOfRemovedItems() throws Exception {
+        onFx(() -> {
+            Form form = new Form();
+            FormItem text = new FormItem();
+            form.getItems().add(text);
+            MaterialTextField originalControl = (MaterialTextField) text.getControl();
+            originalControl.setText("preserved");
+
+            text.setHelperTextKey("form.submit");
+            MaterialTextField rebuiltControl = (MaterialTextField) text.getControl();
+            assertNotSame(originalControl, rebuiltControl);
+            assertEquals("preserved", rebuiltControl.getText());
+
+            form.getItems().remove(text);
+            assertNull(text.getControl());
+            assertEquals(1, form.getChildren().size());
+            assertEquals(form.getSubmitButton(), form.getChildren().get(0));
             return null;
         });
     }

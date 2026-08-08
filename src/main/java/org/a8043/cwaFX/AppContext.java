@@ -64,7 +64,7 @@ public class AppContext {
             return (T) bean;
         }
 
-        cwaFX.notifyEvent(new NewBeanEvent(new BeanKey(clazz, name), created));
+        cwaFX.notifyEvent(new NewBeanEvent(key, created));
         return (T) created;
     }
 
