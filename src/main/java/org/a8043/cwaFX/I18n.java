@@ -67,7 +67,8 @@ public class I18n {
 
     private static ResourceBundle loadFrameworkBundle(Locale locale) {
         try {
-            return ResourceBundle.getBundle("defaultLanguages.messages", locale, I18n.class.getModule());
+            return ResourceBundle.getBundle("defaultLanguages.messages", locale, I18n.class.getClassLoader(),
+                ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_DEFAULT));
         } catch (MissingResourceException e) {
             log.error("Failed to load framework bundle for locale: {}", locale);
             return loadFrameworkBundle(Locale.ENGLISH);

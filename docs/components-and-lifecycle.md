@@ -14,6 +14,18 @@ public class PanelModel {
 
 框架预注册了 `CwaFX`、`AppContext`、`WindowCreator`、`EventPublisher`、`KeyMappings`、`FXApp` 和 `Tasks`。这些 Bean 可以直接注入。
 
+使用 `@Service` 标记某个接口的实现类。`@Service` 不创建实例，因此实现类仍需使用 `@Bean` 标记或手动注册。第二初始化阶段会将该实现类已注册的 Bean 汇总为接口列表 Bean；列表名称为 `接口简单名 + "Services"`。一个服务实现多个接口时，会加入每个接口对应的列表。未实现任何接口的 `@Service` 类会在启动时抛出 `IllegalStateException`。
+
+```java
+@Bean
+@Service
+public class LocalGreetingService implements GreetingService {
+}
+
+@Autowired(name = "GreetingServiceServices")
+private List<GreetingService> greetingServices;
+```
+
 ## 依赖注入
 
 ```java

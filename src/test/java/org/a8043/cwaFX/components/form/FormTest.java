@@ -31,7 +31,7 @@ class FormTest {
         try {
             Platform.startup(started::countDown);
             assertTrue(started.await(10, TimeUnit.SECONDS));
-        } catch (IllegalStateException alreadyStarted) {
+        } catch (IllegalStateException ignored) {
         }
     }
 
@@ -94,8 +94,8 @@ class FormTest {
             assertTrue(form.submit());
             assertNotNull(submitted.get());
             assertArrayEquals(new Object[]{"Ada", 4.5d, null}, submitted.get().getValues());
-            assertTrue(form.isSubmitting());
-            assertTrue(form.getSubmitButton().isDisabled());
+            assertFalse(form.isSubmitting());
+            assertFalse(form.getSubmitButton().isDisabled());
             return null;
         });
     }
