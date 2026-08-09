@@ -72,14 +72,14 @@ public class MainWindow {
     @OnFXThread
     private void open() {
         Window window = windows.create("main", "window.title", 960, 640);
-        window.display(new Label(I18n.get("window.ready")));
+        window.navigate("mainView", null);
         window.show();
     }
 }
 ```
 
 `WindowCreator.create` 的第一个参数是窗口 Bean 名称，第二个参数是国际化 key。窗口会被注册到 `AppContext`，可按
-`Window.class` 和名称获取。
+`Window.class` 和名称获取。`mainView` 是对应 `@FxmlView` 的页面名称。
 
 ## 5. 构建和运行
 

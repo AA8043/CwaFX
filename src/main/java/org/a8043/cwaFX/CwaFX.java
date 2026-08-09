@@ -13,6 +13,7 @@ import org.a8043.cwaFX.annotationHandlers.AnnotationHandler;
 import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.InitEvent;
 import org.a8043.cwaFX.keyMapping.KeyMappings;
+import org.a8043.cwaFX.navigation.PageRegistry;
 import org.a8043.cwaFX.tasks.Tasks;
 import org.a8043.cwaFX.userEvent.EventPublisher;
 import org.a8043.cwaFX.window.WindowCreator;
@@ -71,6 +72,7 @@ public class CwaFX {
         context.addBean(new BeanKey(CwaFX.class, "CwaFX"), this);
         context.addBean(new BeanKey(AppContext.class, "AppContext"), context);
         context.addBean(new BeanKey(WindowCreator.class, "WindowCreator"), new WindowCreator(context));
+        context.addBean(new BeanKey(PageRegistry.class, "PageRegistry"), new PageRegistry());
         context.addBean(new BeanKey(EventPublisher.class, "EventPublisher"), new EventPublisher(this));
         context.addBean(new BeanKey(KeyMappings.class, "KeyMappings"), new KeyMappings(this));
 

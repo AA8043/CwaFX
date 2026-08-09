@@ -8,6 +8,7 @@ Java 21。
 - 基于 `@Bean` 和 `@Autowired` 的组件管理与依赖注入
 - `@Initialize`、`@PreDestroy`、`@OnEvent`、`@OnKeyPressed` 生命周期和事件回调
 - `@FxmlView` 自动加载 FXML 并注册为 `Node` Bean
+- 窗口级页面导航，支持页面参数、替换、返回栈和返回结果
 - `WindowCreator`/`Window` 提供窗口、模态框、通知和默认样式支持
 - `Tasks` 统一管理 JavaFX `Task`，提供可绑定的任务列表视图
 - `@Settings` 从 JSON 文件加载并在退出时保存设置

@@ -21,7 +21,7 @@ public class MainController {
 
 ```java
 Window window = windowCreator.create("main", "window.title", 960, 640);
-window.display(mainNode);
+window.navigate("mainView", null);
 window.show();
 
 ModalController<Node> modal = window.showModal("详情", detailNode);
@@ -35,6 +35,37 @@ NotificationController notice = window.showNotification("success", "操作完成
 
 `WindowCreator` 默认加载 `defaultStyles/light.css`。可用 `setStyles`、`addStyle` 和 `removeStyle` 更新所有已创建窗口的样式；深色主题资源为
 `WindowCreator.DARK_STYLE`。
+
+## 页面导航
+
+标注 `@FxmlView` 的控制器可以作为页面，通过注解名称在窗口内切换。控制器实现 `Page<T>` 后，会在页面每次变为可见前收到进入参数：
+
+```java
+@Bean
+@FxmlView("detailPage")
+public class DetailController implements Page<Long> {
+    @Override
+    public void onNavigate(Long userId) {
+        // 根据 userId 刷新页面
+    }
+}
+```
+
+导航默认把当前页压入当前窗口的返回栈；首次导航会创建根页：
+
+```java
+window.navigate("homePage", null);
+window.navigate("detailPage", 1001L, result -> refresh(result));
+window.back("saved");
+```
+
+`replace` 会替换当前页但保留更早的历史：
+
+```java
+window.replace("editPage", 1001L);
+```
+
+可通过 `canGoBack()` 控制返回操作；根页调用 `back()` 会抛出 `IllegalStateException`。导航方法应在 JavaFX Application Thread 调用。
 
 ## 后台任务
 

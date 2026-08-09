@@ -13,10 +13,12 @@ import org.a8043.cwaFX.I18n;
 import org.a8043.cwaFX.annotations.view.FxmlView;
 import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.NewBeanEvent;
+import org.a8043.cwaFX.navigation.PageRegistry;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @AutoService(AnnotationHandler.class)
@@ -26,6 +28,7 @@ public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
     public void onEvent(Class<?> clazz, FxmlView annotation, Event event, AppContext context) {
         if (event instanceof NewBeanEvent e && e.getKey().getClazz().equals(clazz)) {
             CountDownLatch latch = new CountDownLatch(1);
+            AtomicReference<RuntimeException> failure = new AtomicReference<>();
             Platform.runLater(() -> {
                 URL url = annotation.fxml().isEmpty() ? clazz.getResource(clazz.getSimpleName() + ".fxml") :
                     ResourceUtil.getResource(annotation.fxml());
@@ -34,14 +37,22 @@ public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
                 loader.setControllerFactory(c -> e.getObject());
                 String name = annotation.value().isEmpty() ? clazz.getSimpleName() + "Node" : annotation.value();
                 try {
-                    context.addBean(new BeanKey(Node.class, name), loader.<Node>load());
+                    Node node = loader.load();
+                    context.getBean(PageRegistry.class, "PageRegistry").register(name, node, e.getObject());
+                    context.addBean(new BeanKey(Node.class, name), node);
                 } catch (IOException ex) {
                     log.error("Error loading FXML for class: {}", clazz.getName(), ex);
+                    failure.set(new IllegalStateException("Unable to load FXML for class: " + clazz.getName(), ex));
+                } catch (RuntimeException ex) {
+                    failure.set(ex);
                 } finally {
                     latch.countDown();
                 }
             });
             latch.await();
+            if (failure.get() != null) {
+                throw failure.get();
+            }
         }
     }
 

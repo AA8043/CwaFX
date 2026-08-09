@@ -27,8 +27,11 @@ import org.a8043.cwaFX.I18n;
 import org.a8043.cwaFX.annotations.bean.Bean;
 import org.a8043.cwaFX.events.KeyPressEvent;
 import org.a8043.cwaFX.keyMapping.KeyMappings;
+import org.a8043.cwaFX.navigation.PageRegistry;
+import org.a8043.cwaFX.navigation.WindowNavigation;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Bean(single = false)
@@ -44,6 +47,7 @@ public class Window {
     private VBox notificationContainer;
     @Getter
     private final WindowStatus status;
+    private final WindowNavigation navigation;
 
     Window(WindowCreator windowCreator, String name, Stage stage) {
         this.windowCreator = windowCreator;
@@ -51,6 +55,8 @@ public class Window {
         this.stage = stage;
         scene = new Scene(pane);
         status = new WindowStatus(stage.getWidth(), stage.getHeight(), stage.getX(), stage.getY(), stage.isMaximized());
+        navigation = new WindowNavigation(windowCreator.getContext().getBean(PageRegistry.class, "PageRegistry"),
+            this::displayContent);
 
         stage.widthProperty().addListener((obs, oldVal, newVal) -> {
             windowCreator.updateStatusJson(this);
@@ -92,7 +98,31 @@ public class Window {
         stage.show();
     }
 
-    public void display(Node node) {
+    public <T> void navigate(String pageName, T parameter) {
+        navigation.navigate(pageName, parameter);
+    }
+
+    public <T, R> void navigate(String pageName, T parameter, Consumer<? super R> onResult) {
+        navigation.navigate(pageName, parameter, onResult);
+    }
+
+    public <T> void replace(String pageName, T parameter) {
+        navigation.replace(pageName, parameter);
+    }
+
+    public void back() {
+        navigation.back();
+    }
+
+    public <R> void back(R result) {
+        navigation.back(result);
+    }
+
+    public boolean canGoBack() {
+        return navigation.canGoBack();
+    }
+
+    private void displayContent(Node node) {
         Objects.requireNonNull(node, "The node to display must not be null.");
         if (pane.getChildren().isEmpty()) {
             pane.getChildren().add(node);
