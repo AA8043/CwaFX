@@ -4,11 +4,11 @@
 
 文件位置固定为 `src/main/resources/app.json`（打包后是 classpath 根目录）：
 
-| 字段                 | 类型   | 默认值  | 说明                                 |
-|----------------------|--------|---------|--------------------------------------|
-| `defaultLanguage`    | 字符串 | `en_US` | 启动时使用的 `Locale`，例如 `zh_CN`  |
-| `taskThreadPoolSize` | 整数   | `2`     | `Tasks` 固定线程池大小               |
-| `settingsBaseDir`    | 路径   | `.`     | `@Settings` 文件的基础目录，支持 `~` |
+| 字段                 | 类型   | 默认值       | 说明                                |
+|----------------------|--------|--------------|-------------------------------------|
+| `defaultLanguage`    | 字符串 | JVM 默认语言 | 启动时使用的 `Locale`，例如 `zh-CN` |
+| `taskThreadPoolSize` | 整数   | `2`          | `Tasks` 固定线程池大小              |
+| `settingsBaseDir`    | 路径   | `.`          | 设置文件的基础目录，支持 `~`        |
 
 ## 语言资源
 

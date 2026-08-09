@@ -10,7 +10,7 @@ import java.util.Locale;
 @Getter
 @Setter(AccessLevel.PRIVATE)
 public class AppConfig {
-    private String defaultLanguage = Locale.getDefault().getLanguage();
+    private String defaultLanguage = Locale.getDefault().toLanguageTag();
     private int taskThreadPoolSize = 2;
     private File settingsBaseDir = new File(".");
 }

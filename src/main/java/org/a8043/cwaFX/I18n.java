@@ -28,7 +28,7 @@ public class I18n {
 
     static void load(Class<?> clazz, Locale locale) {
         log.info("Language: {}", locale.getDisplayName());
-        appBundle = loadAppBundle(locale, clazz.getModule());
+        appBundle = loadAppBundle(locale, clazz.getClassLoader());
         frameworkBundle = loadFrameworkBundle(locale);
     }
 
@@ -43,9 +43,10 @@ public class I18n {
         return MessageFormat.format(str, (Object[]) args);
     }
 
-    private static ResourceBundle loadAppBundle(Locale locale, Module module) {
+    private static ResourceBundle loadAppBundle(Locale locale, ClassLoader classLoader) {
         try {
-            return ResourceBundle.getBundle("languages.messages", locale, module);
+            return ResourceBundle.getBundle("languages.messages", locale, classLoader,
+                ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_DEFAULT));
         } catch (MissingResourceException e) {
             if (locale == Locale.ENGLISH) {
                 log.error("Failed to load app bundle for locale: {}", locale);
@@ -61,7 +62,7 @@ public class I18n {
                     }
                 };
             }
-            return loadAppBundle(Locale.ENGLISH, module);
+            return loadAppBundle(Locale.ENGLISH, classLoader);
         }
     }
 

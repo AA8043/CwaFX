@@ -18,7 +18,8 @@ public class FXApp extends Application {
 
     @Override
     public void start(Stage stage) {
-        I18n.load(CwaFX.getInstance().getClazz(), Locale.of(CwaFX.getInstance().getConfig().getDefaultLanguage()));
+        I18n.load(CwaFX.getInstance().getClazz(),
+            Locale.forLanguageTag(CwaFX.getInstance().getConfig().getDefaultLanguage()));
         CwaFX.getInstance().getFxLoadLatch().countDown();
     }
 
