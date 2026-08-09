@@ -6,6 +6,7 @@ import org.a8043.cwaFX.annotationHandlers.AnnotationHandler;
 import org.a8043.cwaFX.annotations.bean.Autowired;
 import org.a8043.cwaFX.annotations.bean.Bean;
 import org.a8043.cwaFX.annotations.bean.Initialize;
+import org.a8043.cwaFX.events.Event;
 import org.a8043.cwaFX.events.InitEvent;
 import org.a8043.cwaFX.events.NewBeanEvent;
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,22 @@ class AutowiredInjectionTest {
     }
 
     @Test
+    void injectsAnInterfaceDependencyRegisteredAfterTheConsumer() {
+        CwaFX cwaFX = new CwaFX(DelayedConsumer.class, new String[0]);
+        AppContext context = cwaFX.getContext();
+        context.getClasses().getClassMap().put(DelayedConsumer.class,
+            Arrays.stream(DelayedConsumer.class.getAnnotations()).toList());
+
+        DelayedConsumer consumer = new DelayedConsumer();
+        context.addBean(new BeanKey(DelayedConsumer.class, "consumer"), consumer);
+
+        Dependency client = new DependencyImpl();
+        context.addBean(new BeanKey(Dependency.class, "Client"), client);
+
+        assertSame(client, consumer.client);
+    }
+
+    @Test
     void registersBeanBeforePublishingNewBeanEvent() throws ReflectiveOperationException {
         CwaFX cwaFX = new CwaFX(EventReentrantBean.class, new String[0]);
         AppContext context = cwaFX.getContext();
@@ -62,9 +79,9 @@ class AutowiredInjectionTest {
         AtomicReference<Object> observedBean = new AtomicReference<>();
         AnnotationHandler<Bean> handler = new AnnotationHandler<>() {
             @Override
-            public void onEvent(Class<?> clazz, Bean annotation, org.a8043.cwaFX.events.Event event,
+            public void onEvent(Class<?> clazz, Bean annotation, Event event,
                                 AppContext eventContext) {
-                if (event instanceof NewBeanEvent newBean && clazz == EventReentrantBean.class) {
+                if (event instanceof NewBeanEvent && clazz == EventReentrantBean.class) {
                     observedBean.set(eventContext.getBean(EventReentrantBean.class, ""));
                 }
             }
@@ -112,6 +129,18 @@ class AutowiredInjectionTest {
             initializedNode = node;
             initializeCount++;
         }
+    }
+
+    @Bean
+    public static class DelayedConsumer {
+        @Autowired
+        private Dependency client;
+    }
+
+    private interface Dependency {
+    }
+
+    private static class DependencyImpl implements Dependency {
     }
 
     @Bean

@@ -42,10 +42,7 @@ public class BeanHandler implements AnnotationHandler<Bean> {
                     }
                 }
 
-                if (context.getInjectionFailures().containsKey(newBean.getKey())) {
-                    List<FieldAccessor> field = context.getInjectionFailures().remove(newBean.getKey());
-                    field.forEach(f -> f.set(newBean.getObject()));
-                }
+                injectPendingDependencies(newBean, context);
             }
 
             case UserEventWrapper wrapper -> Util.getMethods(clazz, OnEvent.class).forEach(method -> {
@@ -73,7 +70,7 @@ public class BeanHandler implements AnnotationHandler<Bean> {
                 Object dependency = context.getBean(field.getType(), configuredName);
                 if (dependency == null) {
                     log.debug("Inj fail: {}, ({})", dependencyName, field.getType());
-                    context.getInjectionFailures().computeIfAbsent(new BeanKey(field.getType(), dependencyName),
+                    context.getInjectionFailures().computeIfAbsent(new BeanKey(field.getType(), configuredName),
                         k -> new ArrayList<>()).add(new FieldAccessor(field, bean));
                     return;
                 }
@@ -85,6 +82,20 @@ public class BeanHandler implements AnnotationHandler<Bean> {
                     throw new RuntimeException(e);
                 }
             }));
+    }
+
+    private static void injectPendingDependencies(NewBeanEvent newBean, AppContext context) {
+        injectPendingDependencies(new BeanKey(newBean.getKey().getClazz(), ""), newBean, context);
+        if (!newBean.getKey().getName().isEmpty()) {
+            injectPendingDependencies(newBean.getKey(), newBean, context);
+        }
+    }
+
+    private static void injectPendingDependencies(BeanKey key, NewBeanEvent newBean, AppContext context) {
+        List<FieldAccessor> fields = context.getInjectionFailures().remove(key);
+        if (fields != null) {
+            fields.forEach(field -> field.set(newBean.getObject()));
+        }
     }
 
     private static void initializeBean(Class<?> clazz, Object bean, AppContext context) {
