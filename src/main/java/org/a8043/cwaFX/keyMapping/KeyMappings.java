@@ -12,12 +12,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class KeyMappings {
-    private final File file = new File("keyMappings.json");
+    private final File file;
     @Getter
     private final List<KeyMapping> keyMappings = new ArrayList<>();
     private final JSONObject json;
 
     public KeyMappings(CwaFX cwaFX) {
+        file = new File(cwaFX.getConfig().getSettingsBaseDir(), "keyMappings.json");
         if (file.exists()) {
             json = new JSONObject(FileUtil.readUtf8String(file));
         } else {
