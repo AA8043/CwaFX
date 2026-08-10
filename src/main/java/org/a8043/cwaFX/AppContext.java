@@ -74,6 +74,17 @@ public class AppContext {
             .collect(Collectors.toList());
     }
 
+    /**
+     * Returns beans registered under the supplied type, including interface and
+     * superclass registrations whose concrete instance has a different class.
+     */
+    public List<Object> getBeansByKeyClass(Class<?> clazz) {
+        return beans.entrySet().stream()
+            .filter(entry -> entry.getKey().getClazz().equals(clazz))
+            .map(Map.Entry::getValue)
+            .toList();
+    }
+
     public void addBean(BeanKey key, Object bean) {
         beans.put(key, bean);
         cwaFX.notifyEvent(new NewBeanEvent(key, bean));

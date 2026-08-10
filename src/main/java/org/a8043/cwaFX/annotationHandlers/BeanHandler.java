@@ -92,10 +92,27 @@ public class BeanHandler implements AnnotationHandler<Bean> {
     }
 
     private static void injectPendingDependencies(BeanKey key, NewBeanEvent newBean, AppContext context) {
-        List<FieldAccessor> fields = context.getInjectionFailures().remove(key);
-        if (fields != null) {
-            fields.forEach(field -> field.set(newBean.getObject()));
+        List<FieldAccessor> fields = context.getInjectionFailures().get(key);
+        if (fields == null) {
+            return;
         }
+
+        Object dependency;
+        if (key.getName().isEmpty()) {
+            List<Object> beans = context.getBeansByKeyClass(key.getClazz());
+            if (beans.size() != 1) {
+                return;
+            }
+            dependency = beans.getFirst();
+        } else {
+            if (!key.equals(newBean.getKey())) {
+                return;
+            }
+            dependency = newBean.getObject();
+        }
+
+        context.getInjectionFailures().remove(key);
+        fields.forEach(field -> field.set(dependency));
     }
 
     private static void initializeBean(Class<?> clazz, Object bean, AppContext context) {

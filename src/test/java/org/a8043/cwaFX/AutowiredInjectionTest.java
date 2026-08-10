@@ -36,6 +36,23 @@ class AutowiredInjectionTest {
     }
 
     @Test
+    void doesNotInjectAnAmbiguousUnqualifiedDependencyWhenAnotherBeanIsAdded() {
+        CwaFX cwaFX = new CwaFX(Consumer.class, new String[0]);
+        AppContext context = cwaFX.getContext();
+        context.getClasses().getClassMap().put(Consumer.class,
+            Arrays.stream(Consumer.class.getAnnotations()).toList());
+
+        context.addBean(new BeanKey(Node.class, "first"), new Rectangle());
+        context.addBean(new BeanKey(Node.class, "second"), new Rectangle());
+
+        Consumer consumer = new Consumer();
+        context.addBean(new BeanKey(Consumer.class, "consumer"), consumer);
+        context.addBean(new BeanKey(Node.class, "third"), new Rectangle());
+
+        assertNull(consumer.node);
+    }
+
+    @Test
     void initializesBeanCreatedAfterApplicationStartup() {
         CwaFX cwaFX = new CwaFX(InitializedConsumer.class, new String[0]);
         AppContext context = cwaFX.getContext();
