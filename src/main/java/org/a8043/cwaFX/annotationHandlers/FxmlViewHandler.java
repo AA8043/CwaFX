@@ -29,14 +29,16 @@ public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
         if (event instanceof NewBeanEvent e && e.getKey().getClazz().equals(clazz)) {
             CountDownLatch latch = new CountDownLatch(1);
             AtomicReference<RuntimeException> failure = new AtomicReference<>();
-            Platform.runLater(() -> {
-                URL url = annotation.fxml().isEmpty() ? clazz.getResource(clazz.getSimpleName() + ".fxml") :
-                    ResourceUtil.getResource(annotation.fxml());
-                FXMLLoader loader = new FXMLLoader(url);
-                loader.setResources(I18n.getBundle());
-                loader.setControllerFactory(c -> e.getObject());
-                String name = annotation.value().isEmpty() ? clazz.getSimpleName() + "Node" : annotation.value();
+            Runnable load = () -> {
                 try {
+                    URL url = annotation.fxml().isEmpty() ? clazz.getResource(clazz.getSimpleName() + ".fxml") :
+                        ResourceUtil.getResource(annotation.fxml());
+                    FXMLLoader loader = new FXMLLoader(url);
+                    loader.setResources(I18n.getBundle());
+                    loader.setControllerFactory(c -> e.getObject());
+                    String name = annotation.value().isEmpty()
+                        ? e.getKey().getName() + "Node"
+                        : annotation.value();
                     Node node = loader.load();
                     context.getBean(PageRegistry.class, "PageRegistry").register(name, node, e.getObject());
                     context.addBean(new BeanKey(Node.class, name), node);
@@ -48,7 +50,12 @@ public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
                 } finally {
                     latch.countDown();
                 }
-            });
+            };
+            if (Platform.isFxApplicationThread()) {
+                load.run();
+            } else {
+                Platform.runLater(load);
+            }
             latch.await();
             if (failure.get() != null) {
                 throw failure.get();

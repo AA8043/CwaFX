@@ -83,7 +83,7 @@ signing {
 }
 
 group = "io.github.aa8043"
-version = "1.4.2"
+version = "1.4.3"
 
 repositories {
     mavenCentral()
