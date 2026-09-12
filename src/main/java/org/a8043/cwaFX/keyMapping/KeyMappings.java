@@ -10,6 +10,7 @@ import org.a8043.cwaFX.events.DestroyEvent;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class KeyMappings {
     private final File file;
@@ -48,5 +49,10 @@ public class KeyMappings {
         keyMappings.remove(mapping);
         keyMappings.add(new KeyMapping(name, key, mapping != null ? mapping.getOnlyIn() : null));
         json.set(name, key.getName());
+    }
+
+    public KeyCombination getKey(String name) {
+        return keyMappings.stream().filter(km -> Objects.equals(km.getName(), name))
+            .findFirst().map(KeyMapping::getKey).orElse(null);
     }
 }
