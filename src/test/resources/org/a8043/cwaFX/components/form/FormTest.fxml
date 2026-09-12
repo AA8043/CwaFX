@@ -2,18 +2,19 @@
 
 <?import java.lang.String?>
 <?import org.a8043.cwaFX.components.form.Form?>
-<?import org.a8043.cwaFX.components.form.FormItem?>
+<?import org.a8043.cwaFX.components.form.TextFormItem?>
+<?import org.a8043.cwaFX.components.form.ComboBoxFormItem?>
 <?import org.a8043.cwaFX.components.form.TextLengthRequirement?>
 
 <Form xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.a8043.cwaFX.components.form.FormTest$FxmlController" onSubmit="#submit">
-    <FormItem labelKey="form.test.username" required="true">
+    <TextFormItem labelKey="form.test.username" required="true">
         <requirements>
             <TextLengthRequirement minLength="3" />
         </requirements>
-    </FormItem>
-    <FormItem labelKey="form.test.role" type="COMBO_BOX">
+    </TextFormItem>
+    <ComboBoxFormItem labelKey="form.test.role">
         <options>
             <String fx:value="viewer" />
         </options>
-    </FormItem>
+    </ComboBoxFormItem>
 </Form>

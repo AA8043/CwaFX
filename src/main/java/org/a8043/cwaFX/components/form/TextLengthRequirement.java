@@ -26,8 +26,8 @@ public class TextLengthRequirement implements Requirement {
     }
 
     @Override
-    public boolean supports(ItemType itemType) {
-        return itemType == ItemType.TEXT || itemType == ItemType.PASSWORD || itemType == ItemType.TEXT_AREA;
+    public boolean supports(Class<?> valueType) {
+        return valueType == String.class;
     }
 
     private String resolveMessageKey() {

@@ -7,7 +7,9 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import org.a8043.cwaFX.components.MaterialTextField;
+import org.a8043.cwaFX.components.form.custom.CustomFormItem;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -42,11 +44,8 @@ class FormTest {
     void rendersConfiguredControlTypes() throws Exception {
         onFx(() -> {
             Form form = new Form();
-            for (ItemType type : ItemType.values()) {
-                FormItem item = new FormItem();
-                item.setType(type);
-                form.getItems().add(item);
-            }
+            form.getItems().addAll(new TextFormItem(), new PasswordFormItem(), new TextAreaFormItem(),
+                new ComboBoxFormItem(), new NumberFormItem(), new CheckBoxFormItem(), new DateFormItem());
 
             assertInstanceOf(MaterialTextField.class, form.getItems().get(0).getControl());
             assertEquals(MaterialTextField.Type.NORMAL,
@@ -69,20 +68,19 @@ class FormTest {
             AtomicReference<FormSubmitEvent> submitted = new AtomicReference<>();
             form.setOnSubmit(submitted::set);
 
-            FormItem name = new FormItem();
+            FormItem name = new TextFormItem();
             name.setRequired(true);
             TextLengthRequirement length = new TextLengthRequirement();
             length.setMinLength(3);
             name.getRequirements().add(length);
 
-            FormItem number = new FormItem();
-            number.setType(ItemType.NUMBER);
+            FormItem number = new NumberFormItem();
             NumberRangeRequirement range = new NumberRangeRequirement();
             range.setMin(1);
             range.setMax(10);
             number.getRequirements().add(range);
 
-            FormItem optional = new FormItem();
+            FormItem optional = new TextFormItem();
             form.getItems().addAll(name, number, optional);
 
             assertFalse(form.submit());
@@ -160,14 +158,11 @@ class FormTest {
             AtomicReference<FormSubmitEvent> submitted = new AtomicReference<>();
             form.setOnSubmit(submitted::set);
 
-            FormItem choice = new FormItem();
-            choice.setType(ItemType.COMBO_BOX);
+            ComboBoxFormItem choice = new ComboBoxFormItem();
             choice.getOptions().addAll("one", "two");
-            FormItem accepted = new FormItem();
-            accepted.setType(ItemType.CHECK_BOX);
+            FormItem accepted = new CheckBoxFormItem();
             accepted.setRequired(true);
-            FormItem date = new FormItem();
-            date.setType(ItemType.DATE);
+            FormItem date = new DateFormItem();
             form.getItems().addAll(choice, accepted, date);
 
             ((ComboBox<String>) choice.getControl()).setValue("two");
@@ -187,7 +182,7 @@ class FormTest {
     void rebuildPreservesValuesAndClearsControlsOfRemovedItems() throws Exception {
         onFx(() -> {
             Form form = new Form();
-            FormItem text = new FormItem();
+            FormItem text = new TextFormItem();
             form.getItems().add(text);
             MaterialTextField originalControl = (MaterialTextField) text.getControl();
             originalControl.setText("preserved");
@@ -201,6 +196,50 @@ class FormTest {
             assertNull(text.getControl());
             assertEquals(1, form.getChildren().size());
             assertEquals(form.getSubmitButton(), form.getChildren().get(0));
+            return null;
+        });
+    }
+
+    @Test
+    void supportsExternalItemsAndSubclassConfigurationRebuilds() throws Exception {
+        onFx(() -> {
+            Form form = new Form();
+            CustomFormItem item = new CustomFormItem();
+            AtomicReference<FormSubmitEvent> submitted = new AtomicReference<>();
+            form.setOnSubmit(submitted::set);
+            form.getItems().add(item);
+
+            TextField originalControl = (TextField) item.getControl();
+            originalControl.setText("custom value");
+            item.setPromptText("updated prompt");
+
+            TextField rebuiltControl = (TextField) item.getControl();
+            assertNotSame(originalControl, rebuiltControl);
+            assertEquals("updated prompt", rebuiltControl.getPromptText());
+            assertEquals("custom value", rebuiltControl.getText());
+            assertTrue(form.submit());
+            assertArrayEquals(new Object[]{"custom value"}, submitted.get().getValues());
+            return null;
+        });
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void comboBoxOptionsRebuildControlAndPreserveSelection() throws Exception {
+        onFx(() -> {
+            Form form = new Form();
+            ComboBoxFormItem item = new ComboBoxFormItem();
+            item.getOptions().add("one");
+            form.getItems().add(item);
+
+            ComboBox<String> originalControl = (ComboBox<String>) item.getControl();
+            originalControl.setValue("one");
+            item.getOptions().add("two");
+
+            ComboBox<String> rebuiltControl = (ComboBox<String>) item.getControl();
+            assertNotSame(originalControl, rebuiltControl);
+            assertEquals(java.util.List.of("one", "two"), rebuiltControl.getItems());
+            assertEquals("one", rebuiltControl.getValue());
             return null;
         });
     }

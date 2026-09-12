@@ -43,10 +43,8 @@ class RequirementTest {
         requirement.setMaxLength(3);
         assertThrows(IllegalStateException.class, () -> requirement.validate("text"));
 
-        assertTrue(requirement.supports(ItemType.TEXT));
-        assertTrue(requirement.supports(ItemType.PASSWORD));
-        assertTrue(requirement.supports(ItemType.TEXT_AREA));
-        assertFalse(requirement.supports(ItemType.NUMBER));
+        assertTrue(requirement.supports(String.class));
+        assertFalse(requirement.supports(Double.class));
     }
 
     @Test
@@ -85,8 +83,8 @@ class RequirementTest {
         requirement.setMax(3);
         assertThrows(IllegalStateException.class, () -> requirement.validate(1));
 
-        assertTrue(requirement.supports(ItemType.NUMBER));
-        assertFalse(requirement.supports(ItemType.TEXT));
+        assertTrue(requirement.supports(Double.class));
+        assertFalse(requirement.supports(String.class));
     }
 
     @Test

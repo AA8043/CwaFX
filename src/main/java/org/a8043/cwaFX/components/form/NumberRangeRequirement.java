@@ -26,8 +26,8 @@ public class NumberRangeRequirement implements Requirement {
     }
 
     @Override
-    public boolean supports(ItemType itemType) {
-        return itemType == ItemType.NUMBER;
+    public boolean supports(Class<?> valueType) {
+        return Number.class.isAssignableFrom(valueType);
     }
 
     private String resolveMessageKey() {

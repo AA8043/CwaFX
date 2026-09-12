@@ -6,7 +6,7 @@ package org.a8043.cwaFX.components.form;
 public interface Requirement {
     ValidationResult validate(Object value);
 
-    default boolean supports(ItemType itemType) {
+    default boolean supports(Class<?> valueType) {
         return true;
     }
 }

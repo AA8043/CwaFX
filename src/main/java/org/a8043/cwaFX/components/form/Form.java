@@ -6,32 +6,28 @@ import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.layout.Priority;
+import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
 import org.a8043.cwaFX.I18n;
-import org.a8043.cwaFX.components.MaterialTextField;
 import org.a8043.cwaFX.window.WindowCreator;
 
-import java.time.LocalDate;
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 
 @DefaultProperty("items")
 public class Form extends VBox {
     public static final String DEFAULT_SUBMIT_TEXT_KEY = "form.submit";
 
-    private static final PseudoClass PSEUDO_ERROR = PseudoClass.getPseudoClass("form-error");
-
     @Getter
     private final ObservableList<FormItem> items = FXCollections.observableArrayList();
-    private final Map<FormItem, InputAdapter> adapters = new IdentityHashMap<>();
+    private final Map<FormItem, RenderedItem> renderedItems = new IdentityHashMap<>();
     @Getter
     private final Button submitButton = new Button();
     private final ReadOnlyBooleanWrapper submitting = new ReadOnlyBooleanWrapper(this, "submitting", false);
@@ -80,14 +76,14 @@ public class Form extends VBox {
 
             for (int index = 0; index < items.size(); index++) {
                 FormItem item = items.get(index);
-                InputAdapter adapter = adapters.get(item);
-                adapter.clearError();
+                RenderedItem renderedItem = renderedItems.get(item);
+                item.clearError(renderedItem.row(), renderedItem.control(), resolve(item.getHelperTextKey()));
 
-                InputValue inputValue = adapter.readValue();
+                FormItem.InputValue inputValue = item.readInput(renderedItem.control());
                 ValidationResult failure = inputValue.error();
                 Object value = inputValue.value();
 
-                if (failure == null && isMissing(item, value) && item.isRequired()) {
+                if (failure == null && item.isMissing(value) && item.isRequired()) {
                     failure = ValidationResult.invalid(item.getRequiredMessageKey());
                 }
                 if (failure == null && value != null) {
@@ -101,7 +97,7 @@ public class Form extends VBox {
                 }
 
                 if (failure != null) {
-                    adapter.showError(resolve(failure));
+                    item.showError(renderedItem.row(), renderedItem.control(), resolve(failure));
                     valid = false;
                 } else {
                     values[index] = value;
@@ -157,42 +153,35 @@ public class Form extends VBox {
     }
 
     private void attachItem(FormItem item) {
-        item.labelKeyProperty().addListener(itemConfigurationListener);
-        item.helperTextKeyProperty().addListener(itemConfigurationListener);
-        item.typeProperty().addListener(itemConfigurationListener);
-        item.requiredProperty().addListener(itemConfigurationListener);
-        item.requiredMessageKeyProperty().addListener(itemConfigurationListener);
-        item.getOptions().addListener(itemConfigurationListener);
-        item.getRequirements().addListener(itemConfigurationListener);
+        item.configurationVersionProperty().addListener(itemConfigurationListener);
     }
 
     private void detachItem(FormItem item) {
-        item.labelKeyProperty().removeListener(itemConfigurationListener);
-        item.helperTextKeyProperty().removeListener(itemConfigurationListener);
-        item.typeProperty().removeListener(itemConfigurationListener);
-        item.requiredProperty().removeListener(itemConfigurationListener);
-        item.requiredMessageKeyProperty().removeListener(itemConfigurationListener);
-        item.getOptions().removeListener(itemConfigurationListener);
-        item.getRequirements().removeListener(itemConfigurationListener);
+        item.configurationVersionProperty().removeListener(itemConfigurationListener);
+        renderedItems.remove(item);
         item.setControl(null);
     }
 
     private void rebuild() {
         Map<FormItem, Object> currentValues = new IdentityHashMap<>();
-        adapters.forEach((item, adapter) -> currentValues.put(item, adapter.readValue().value()));
-        adapters.clear();
+        renderedItems.forEach((item, rendered) ->
+            currentValues.put(item, item.readInput(rendered.control()).value()));
+        renderedItems.clear();
 
         List<Node> rows = new ArrayList<>(items.size() + 1);
         for (FormItem item : items) {
             validateRequirements(item);
-            InputAdapter adapter = createAdapter(item);
+            String label = resolve(item.getLabelKey());
+            String helperText = resolve(item.getHelperTextKey());
+            Node control = item.createControl(label, helperText);
+            Node row = item.createRow(control, label, helperText);
             Object currentValue = currentValues.get(item);
             if (currentValue != null) {
-                adapter.setValue(currentValue);
+                item.writeValue(control, currentValue);
             }
-            adapters.put(item, adapter);
-            item.setControl(adapter.control());
-            rows.add(adapter.row());
+            renderedItems.put(item, new RenderedItem(row, control));
+            item.setControl(control);
+            rows.add(row);
         }
         rows.add(submitButton);
         getChildren().setAll(rows);
@@ -200,166 +189,11 @@ public class Form extends VBox {
 
     private void validateRequirements(FormItem item) {
         for (Requirement requirement : item.getRequirements()) {
-            if (!requirement.supports(item.getType())) {
+            if (!requirement.supports(item.getValueType())) {
                 throw new IllegalArgumentException(requirement.getClass().getSimpleName()
-                                                   + " does not support " + item.getType());
+                                                   + " does not support " + item.getValueType().getTypeName());
             }
         }
-    }
-
-    private InputAdapter createAdapter(FormItem item) {
-        return switch (item.getType()) {
-            case TEXT -> materialTextAdapter(item, false, MaterialTextField.Type.NORMAL);
-            case PASSWORD -> materialTextAdapter(item, false, MaterialTextField.Type.PASSWORD);
-            case NUMBER -> materialTextAdapter(item, true, MaterialTextField.Type.NORMAL);
-            case TEXT_AREA -> textAreaAdapter(item);
-            case COMBO_BOX -> comboBoxAdapter(item);
-            case CHECK_BOX -> checkBoxAdapter(item);
-            case DATE -> dateAdapter(item);
-        };
-    }
-
-    private InputAdapter materialTextAdapter(FormItem item, boolean number, MaterialTextField.Type type) {
-        MaterialTextField field = new MaterialTextField(resolve(item.getLabelKey()));
-        field.setType(type);
-        field.setHelperText(resolve(item.getHelperTextKey()));
-        field.setMaxWidth(Double.MAX_VALUE);
-
-        return new InputAdapter() {
-            @Override
-            public Node row() {
-                return field;
-            }
-
-            @Override
-            public Node control() {
-                return field;
-            }
-
-            @Override
-            public InputValue readValue() {
-                String text = field.getText();
-                if (text == null || text.isBlank()) {
-                    return InputValue.empty();
-                }
-                if (!number) {
-                    return InputValue.of(text);
-                }
-                try {
-                    double value = Double.parseDouble(text);
-                    return Double.isFinite(value) ? InputValue.of(value)
-                        : InputValue.invalid("form.validation.number");
-                } catch (NumberFormatException exception) {
-                    return InputValue.invalid("form.validation.number");
-                }
-            }
-
-            @Override
-            public void setValue(Object value) {
-                field.setText(value == null ? "" : String.valueOf(value));
-            }
-
-            @Override
-            public void showError(String message) {
-                field.setError(true);
-                field.setHelperText(message);
-            }
-
-            @Override
-            public void clearError() {
-                field.setError(false);
-                field.setHelperText(resolve(item.getHelperTextKey()));
-            }
-        };
-    }
-
-    private InputAdapter textAreaAdapter(FormItem item) {
-        TextArea textArea = new TextArea();
-        textArea.setPrefRowCount(4);
-        return standardAdapter(item, textArea,
-            () -> stringValue(textArea.getText()),
-            value -> textArea.setText(value instanceof String text ? text : ""));
-    }
-
-    private InputAdapter comboBoxAdapter(FormItem item) {
-        ComboBox<String> comboBox = new ComboBox<>();
-        comboBox.getItems().setAll(item.getOptions());
-        comboBox.setMaxWidth(Double.MAX_VALUE);
-        return standardAdapter(item, comboBox,
-            () -> InputValue.of(comboBox.getValue()),
-            value -> comboBox.setValue(value instanceof String text ? text : null));
-    }
-
-    private InputAdapter checkBoxAdapter(FormItem item) {
-        CheckBox checkBox = new CheckBox();
-        return standardAdapter(item, checkBox,
-            () -> InputValue.of(checkBox.isSelected()),
-            value -> checkBox.setSelected(Boolean.TRUE.equals(value)));
-    }
-
-    private InputAdapter dateAdapter(FormItem item) {
-        DatePicker datePicker = new DatePicker();
-        datePicker.setMaxWidth(Double.MAX_VALUE);
-        return standardAdapter(item, datePicker,
-            () -> InputValue.of(datePicker.getValue()),
-            value -> datePicker.setValue(value instanceof LocalDate date ? date : null));
-    }
-
-    private InputAdapter standardAdapter(FormItem item, Node control, Supplier<InputValue> reader,
-                                         Consumer<Object> valueWriter) {
-        VBox row = new VBox(4);
-        row.getStyleClass().add("form-item");
-        Label label = new Label(resolve(item.getLabelKey()));
-        label.getStyleClass().add("form-item-label");
-        Label helper = new Label(resolve(item.getHelperTextKey()));
-        helper.getStyleClass().add("form-item-helper");
-        control.getStyleClass().add("form-input");
-        row.getChildren().addAll(label, control, helper);
-        VBox.setVgrow(control, item.getType() == ItemType.TEXT_AREA ? Priority.ALWAYS : Priority.NEVER);
-
-        return new InputAdapter() {
-            @Override
-            public Node row() {
-                return row;
-            }
-
-            @Override
-            public Node control() {
-                return control;
-            }
-
-            @Override
-            public InputValue readValue() {
-                return reader.get();
-            }
-
-            @Override
-            public void setValue(Object value) {
-                valueWriter.accept(value);
-            }
-
-            @Override
-            public void showError(String message) {
-                row.pseudoClassStateChanged(PSEUDO_ERROR, true);
-                control.pseudoClassStateChanged(PSEUDO_ERROR, true);
-                helper.setText(message);
-            }
-
-            @Override
-            public void clearError() {
-                row.pseudoClassStateChanged(PSEUDO_ERROR, false);
-                control.pseudoClassStateChanged(PSEUDO_ERROR, false);
-                helper.setText(resolve(item.getHelperTextKey()));
-            }
-        };
-    }
-
-    private static InputValue stringValue(String text) {
-        return text == null || text.isBlank() ? InputValue.empty() : InputValue.of(text);
-    }
-
-    private boolean isMissing(FormItem item, Object value) {
-        return item.getType() == ItemType.CHECK_BOX ? !Boolean.TRUE.equals(value) : value == null;
     }
 
     private String resolve(ValidationResult result) {
@@ -376,31 +210,6 @@ public class Form extends VBox {
         submitButton.setAlignment(Pos.CENTER);
     }
 
-    private interface InputAdapter {
-        Node row();
-
-        Node control();
-
-        InputValue readValue();
-
-        void setValue(Object value);
-
-        void showError(String message);
-
-        void clearError();
-    }
-
-    private record InputValue(Object value, ValidationResult error) {
-        static InputValue of(Object value) {
-            return new InputValue(value, null);
-        }
-
-        static InputValue empty() {
-            return of(null);
-        }
-
-        static InputValue invalid(String messageKey) {
-            return new InputValue(null, ValidationResult.invalid(messageKey));
-        }
+    private record RenderedItem(Node row, Node control) {
     }
 }
