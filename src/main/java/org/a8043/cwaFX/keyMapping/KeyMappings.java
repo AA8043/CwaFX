@@ -37,6 +37,8 @@ public class KeyMappings {
         String key = json.getStr(keyMapping.getName());
         if (key != null) {
             keyMapping = new KeyMapping(keyMapping.getName(), KeyCombination.valueOf(key), keyMapping.getOnlyIn());
+        } else {
+            json.set(keyMapping.getName(), keyMapping.getKey().toString());
         }
         keyMappings.add(keyMapping);
     }
