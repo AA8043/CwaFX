@@ -12,7 +12,9 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.a8043.cwaFX.I18n;
+import org.a8043.cwaFX.window.Window;
 import org.a8043.cwaFX.window.WindowCreator;
 
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @DefaultProperty("items")
 public class Form extends VBox {
     public static final String DEFAULT_SUBMIT_TEXT_KEY = "form.submit";
@@ -112,9 +115,12 @@ public class Form extends VBox {
             submitting.set(false);
             return true;
         } catch (RuntimeException | Error exception) {
+            log.error("Form submit failed", exception);
             submitting.set(false);
-            WindowCreator.findByScene(getScene())
-                .showTipModal(I18n.get("form.error", exception.getCause().getCause().getMessage()));
+            Window window = WindowCreator.findByScene(getScene());
+            if (window != null) {
+                window.showTipModal(I18n.get("form.error", exception.getMessage()));
+            }
             return false;
         }
     }
