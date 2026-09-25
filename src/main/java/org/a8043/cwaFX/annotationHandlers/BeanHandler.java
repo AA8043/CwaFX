@@ -67,7 +67,7 @@ public class BeanHandler implements AnnotationHandler<Bean> {
             context.getBeans(clazz).forEach(bean -> {
                 String configuredName = field.getAnnotation(Autowired.class).name();
                 String dependencyName = configuredName.isEmpty() ? field.getName() : configuredName;
-                Object dependency = context.getBean(field.getType(), configuredName);
+                Object dependency = context.findBean(field.getType(), configuredName);
                 if (dependency == null) {
                     log.debug("Inj fail: {}, ({})", dependencyName, field.getType());
                     context.getInjectionFailures().computeIfAbsent(new BeanKey(field.getType(), configuredName),

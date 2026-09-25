@@ -53,6 +53,22 @@ class ServiceHandlerTest {
     }
 
     @Test
+    void injectsAServiceListAfterItIsRegisteredWhenTheFieldHasNoExplicitName() {
+        CwaFX cwaFX = new CwaFX(ServiceHandlerTest.class, new String[0]);
+        AppContext context = cwaFX.getContext();
+        register(context, FirstGreetingService.class, ImplicitGreetingConsumer.class);
+
+        FirstGreetingService service = new FirstGreetingService();
+        ImplicitGreetingConsumer consumer = new ImplicitGreetingConsumer();
+        context.addBean(new BeanKey(FirstGreetingService.class, "firstGreetingService"), service);
+        context.addBean(new BeanKey(ImplicitGreetingConsumer.class, "implicitGreetingConsumer"), consumer);
+
+        cwaFX.notifyEvent(new InitEvent(1));
+
+        assertEquals(List.of(service), consumer.services());
+    }
+
+    @Test
     void rejectsServicesWithoutDirectInterfacesDuringSecondInitialization() {
         CwaFX cwaFX = new CwaFX(ServiceHandlerTest.class, new String[0]);
         AppContext context = cwaFX.getContext();
@@ -105,5 +121,15 @@ class ServiceHandlerTest {
     static class GreetingConsumer {
         @Autowired(name = "GreetingServiceServices")
         private List<?> services;
+    }
+
+    @Bean
+    static class ImplicitGreetingConsumer {
+        @Autowired
+        private List<?> greetingServiceServices;
+
+        private List<?> services() {
+            return greetingServiceServices;
+        }
     }
 }

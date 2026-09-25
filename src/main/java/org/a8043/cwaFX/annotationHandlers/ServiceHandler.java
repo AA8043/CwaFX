@@ -26,7 +26,7 @@ public class ServiceHandler implements AnnotationHandler<Service> {
         List<Object> implementations = context.getBeans(clazz);
         for (Class<?> serviceInterface : interfaces) {
             String name = serviceInterface.getSimpleName() + "Services";
-            List<Object> services = context.getBean(List.class, name);
+            List<Object> services = context.findBean(List.class, name);
             if (services == null) {
                 services = new ArrayList<>();
                 context.addBean(new BeanKey(List.class, name), services);

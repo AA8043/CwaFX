@@ -7,6 +7,7 @@ import org.a8043.cwaFX.annotations.bean.Bean;
 import org.a8043.cwaFX.events.NewBeanEvent;
 import org.a8043.cwaFX.window.Window;
 
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -25,7 +26,23 @@ public class AppContext {
     private final Set<Object> initializedBeans = Collections.newSetFromMap(new IdentityHashMap<>());
     private volatile boolean initializationComplete;
 
-    public <T> T getBean(Class<T> clazz, String name) {
+    public <T> T findBean(Class<T> clazz, String name) {
+        if (name.isEmpty()) {
+            List<Object> beansOfType = beans.entrySet().stream()
+                .filter(entry -> entry.getKey().getClazz().equals(clazz))
+                .map(Map.Entry::getValue)
+                .toList();
+            return beansOfType.size() == 1 ? (T) beansOfType.getFirst() : null;
+        }
+
+        Bean annotation = classes.getAnnotation(clazz, Bean.class);
+        String keyName = annotation != null && annotation.single()
+            ? clazz.getSimpleName()
+            : name;
+        return (T) beans.get(new BeanKey(clazz, keyName));
+    }
+
+    public <T> T getBean(Class<T> clazz, String name, Object... args) {
         if (name.isEmpty()) {
             List<Object> beansOfType = beans.entrySet().stream()
                 .filter(entry -> entry.getKey().getClazz().equals(clazz))
@@ -54,9 +71,27 @@ public class AppContext {
 
         final Object created;
         try {
-            created = clazz.getConstructor().newInstance();
+            Class<?>[] argTypes = Arrays.stream(args)
+                .map(Object::getClass)
+                .toArray(Class[]::new);
+
+            Constructor<?> ctor = Arrays.stream(clazz.getConstructors())
+                .filter(c -> c.getParameterCount() == args.length)
+                .filter(c -> {
+                    Class<?>[] params = c.getParameterTypes();
+                    for (int i = 0; i < params.length; i++) {
+                        if (!params[i].isAssignableFrom(argTypes[i])) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .findFirst()
+                .orElseThrow(() -> new NoSuchMethodException(clazz.getName() + " with args " + Arrays.toString(argTypes)));
+
+            created = ctor.newInstance(args);
         } catch (Exception e) {
-            return null;
+            throw new RuntimeException("Failed to create bean: " + clazz.getName(), e);
         }
 
         Object bean = beans.putIfAbsent(key, created);
