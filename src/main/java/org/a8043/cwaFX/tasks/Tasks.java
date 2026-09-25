@@ -11,6 +11,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * A class that manages the execution of tasks in a thread pool.
+ */
 @Slf4j
 public class Tasks {
     private final ThreadPoolExecutor executor;
@@ -23,6 +26,10 @@ public class Tasks {
             60, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
     }
 
+    /**
+     * Executes a task in the thread pool and adds it to the list of tasks.
+     * @param task the task to execute
+     */
     public void executeTask(Task<?> task) {
         task.setOnCancelled(e -> tasks.remove(task));
         task.setOnFailed(e -> {
@@ -34,6 +41,10 @@ public class Tasks {
         executor.execute(task);
     }
 
+    /**
+     * Creates a view that displays the list of tasks.
+     * @return a TasksView that displays the list of tasks
+     */
     public TasksView createView() {
         return new TasksView(tasks);
     }
