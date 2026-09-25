@@ -56,6 +56,7 @@ public class CwaFX {
     public CwaFX(Class<?> clazz, String[] args) {
         this.clazz = clazz;
         context = new AppContext(this, args);
+        CwaPlatform.setCwa(this);
     }
 
     private void startApp() {
