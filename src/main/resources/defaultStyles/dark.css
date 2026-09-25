@@ -354,17 +354,25 @@
 
 /* 进度条 */
 
+.progress-bar {
+    -fx-pref-height: 4px;
+    -fx-min-height: 4px;
+    -fx-max-height: 4px;
+}
+
 .progress-bar .track {
-    -fx-background-color: #313846;
-    -fx-border-color: #4a90d9;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
+    -fx-background-color: #6a6a6a;
+    -fx-background-radius: 2px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 2px;
+    -fx-background-insets: 0;
 }
 
 .progress-bar .bar {
     -fx-background-color: #4a90d9;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
+    -fx-background-radius: 2px;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
 }
 
 /* 滑块 */
