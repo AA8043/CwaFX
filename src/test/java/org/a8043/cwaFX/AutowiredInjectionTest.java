@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -50,6 +51,81 @@ class AutowiredInjectionTest {
         context.addBean(new BeanKey(Node.class, "third"), new Rectangle());
 
         assertNull(consumer.node);
+    }
+
+    @Test
+    void prefersTheFieldNameWhenSeveralBeansOfTheSameTypeExist() {
+        CwaFX cwaFX = new CwaFX(Consumer.class, new String[0]);
+        AppContext context = cwaFX.getContext();
+        context.getClasses().getClassMap().put(Consumer.class,
+            Arrays.stream(Consumer.class.getAnnotations()).toList());
+
+        Node unrelated = new Rectangle();
+        context.addBean(new BeanKey(Node.class, "anotherNode"), new Rectangle());
+        context.addBean(new BeanKey(Node.class, "otherNode"), unrelated);
+        Consumer consumer = new Consumer();
+        context.addBean(new BeanKey(Consumer.class, "consumer"), consumer);
+
+        assertNull(consumer.node);
+
+        Node matching = new Rectangle();
+        context.addBean(new BeanKey(Node.class, "node"), matching);
+
+        assertSame(matching, consumer.node);
+    }
+
+    @Test
+    void fallsBackToTheOnlyBeanWhenTheDefaultFieldNameDoesNotMatch() {
+        CwaFX cwaFX = new CwaFX(LegacyConsumer.class, new String[0]);
+        AppContext context = cwaFX.getContext();
+        context.getClasses().getClassMap().put(LegacyConsumer.class,
+            Arrays.stream(LegacyConsumer.class.getAnnotations()).toList());
+
+        Node onlyBean = new Rectangle();
+        context.addBean(new BeanKey(Node.class, "WindowCreator"), onlyBean);
+        LegacyConsumer consumer = new LegacyConsumer();
+        context.addBean(new BeanKey(LegacyConsumer.class, "consumer"), consumer);
+
+        assertSame(onlyBean, consumer.windows);
+    }
+
+    @Test
+    void doesNotUseTypeFallbackForParameterizedDependencies() {
+        CwaFX cwaFX = new CwaFX(GenericConsumer.class, new String[0]);
+        AppContext context = cwaFX.getContext();
+        context.getClasses().getClassMap().put(GenericConsumer.class,
+            Arrays.stream(GenericConsumer.class.getAnnotations()).toList());
+
+        List<Object> unrelated = new ArrayList<>();
+        unrelated.add(new Object());
+        context.addBean(new BeanKey(List.class, "OtherServices"), unrelated);
+        List<Object> matching = new ArrayList<>();
+        context.addBean(new BeanKey(List.class, "Services"), matching);
+
+        GenericConsumer consumer = new GenericConsumer();
+        context.addBean(new BeanKey(GenericConsumer.class, "consumer"), consumer);
+
+        assertSame(matching, consumer.services);
+    }
+
+    @Test
+    void keepsParameterizedDependencyPendingUntilItsNamedBeanArrives() {
+        CwaFX cwaFX = new CwaFX(GenericConsumer.class, new String[0]);
+        AppContext context = cwaFX.getContext();
+        context.getClasses().getClassMap().put(GenericConsumer.class,
+            Arrays.stream(GenericConsumer.class.getAnnotations()).toList());
+
+        GenericConsumer consumer = new GenericConsumer();
+        context.addBean(new BeanKey(GenericConsumer.class, "consumer"), consumer);
+
+        List<Object> unrelated = new ArrayList<>();
+        unrelated.add(new Object());
+        context.addBean(new BeanKey(List.class, "OtherServices"), unrelated);
+        assertNull(consumer.services);
+
+        List<Object> matching = new ArrayList<>();
+        context.addBean(new BeanKey(List.class, "Services"), matching);
+        assertSame(matching, consumer.services);
     }
 
     @Test
@@ -132,6 +208,18 @@ class AutowiredInjectionTest {
     public static class Consumer {
         @Autowired
         private Node node;
+    }
+
+    @Bean
+    public static class LegacyConsumer {
+        @Autowired
+        private Node windows;
+    }
+
+    @Bean
+    public static class GenericConsumer {
+        @Autowired
+        private List<?> services;
     }
 
     @Bean

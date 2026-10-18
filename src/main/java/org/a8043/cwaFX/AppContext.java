@@ -39,7 +39,16 @@ public class AppContext {
         String keyName = annotation != null && annotation.single()
             ? clazz.getSimpleName()
             : name;
-        return (T) beans.get(new BeanKey(clazz, keyName));
+        Object bean = beans.get(new BeanKey(clazz, keyName));
+        if (bean != null) {
+            return (T) bean;
+        }
+        return (T) beans.entrySet().stream()
+            .filter(entry -> entry.getKey().getClazz().equals(clazz))
+            .filter(entry -> entry.getKey().getName().equalsIgnoreCase(keyName))
+            .map(Map.Entry::getValue)
+            .findFirst()
+            .orElse(null);
     }
 
     public <T> T getBean(Class<T> clazz, String name, Object... args) {
@@ -91,7 +100,7 @@ public class AppContext {
 
             created = ctor.newInstance(args);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to create bean: " + clazz.getName(), e);
+            return null;
         }
 
         Object bean = beans.putIfAbsent(key, created);

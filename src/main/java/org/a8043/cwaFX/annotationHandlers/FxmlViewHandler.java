@@ -37,7 +37,8 @@ public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
                     loader.setResources(I18n.getBundle());
                     loader.setControllerFactory(c -> e.getObject());
                     String name = annotation.value().isEmpty()
-                        ? e.getKey().getName() + "Node"
+                        ? (e.getKey().getName() == null || e.getKey().getName().isEmpty()
+                        ? clazz.getSimpleName() : e.getKey().getName()) + "Node"
                         : annotation.value();
                     Node node = loader.load();
                     context.getBean(PageRegistry.class, "PageRegistry").register(name, node, e.getObject());

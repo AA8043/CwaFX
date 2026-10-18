@@ -13,6 +13,7 @@ import org.a8043.cwaFX.userEvent.UserEventWrapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.reflect.ParameterizedType;
 
 @Slf4j
 @AutoService(AnnotationHandler.class)
@@ -67,10 +68,14 @@ public class BeanHandler implements AnnotationHandler<Bean> {
             context.getBeans(clazz).forEach(bean -> {
                 String configuredName = field.getAnnotation(Autowired.class).name();
                 String dependencyName = configuredName.isEmpty() ? field.getName() : configuredName;
-                Object dependency = context.findBean(field.getType(), configuredName);
+                Object dependency = context.findBean(field.getType(), dependencyName);
+                if (dependency == null && configuredName.isEmpty()
+                    && !(field.getGenericType() instanceof ParameterizedType)) {
+                    dependency = context.findBean(field.getType(), "");
+                }
                 if (dependency == null) {
                     log.debug("Inj fail: {}, ({})", dependencyName, field.getType());
-                    context.getInjectionFailures().computeIfAbsent(new BeanKey(field.getType(), configuredName),
+                    context.getInjectionFailures().computeIfAbsent(new BeanKey(field.getType(), dependencyName),
                         k -> new ArrayList<>()).add(new FieldAccessor(field, bean));
                     return;
                 }
@@ -85,33 +90,54 @@ public class BeanHandler implements AnnotationHandler<Bean> {
     }
 
     private static void injectPendingDependencies(NewBeanEvent newBean, AppContext context) {
-        injectPendingDependencies(new BeanKey(newBean.getKey().getClazz(), ""), newBean, context);
         if (!newBean.getKey().getName().isEmpty()) {
             injectPendingDependencies(newBean.getKey(), newBean, context);
         }
+        injectPendingDependencies(new BeanKey(newBean.getKey().getClazz(), ""), newBean, context);
     }
 
     private static void injectPendingDependencies(BeanKey key, NewBeanEvent newBean, AppContext context) {
-        List<FieldAccessor> fields = context.getInjectionFailures().get(key);
+        BeanKey matchingKey = context.getInjectionFailures().keySet().stream()
+            .filter(candidate -> candidate.getClazz().equals(key.getClazz()))
+            .filter(candidate -> key.getName().isEmpty()
+                || candidate.getName().equalsIgnoreCase(key.getName()))
+            .findFirst()
+            .orElse(null);
+        List<FieldAccessor> fields = matchingKey == null ? null : context.getInjectionFailures().get(matchingKey);
         if (fields == null) {
             return;
         }
 
         Object dependency;
         if (key.getName().isEmpty()) {
+            List<FieldAccessor> typeFallbackFields = fields.stream()
+                .filter(field -> !(field.getField().getGenericType() instanceof ParameterizedType))
+                .toList();
+            if (typeFallbackFields.isEmpty()) {
+                return;
+            }
             List<Object> beans = context.getBeansByKeyClass(key.getClazz());
             if (beans.size() != 1) {
                 return;
             }
             dependency = beans.getFirst();
+            matchingKey = context.getInjectionFailures().keySet().stream()
+                .filter(candidate -> candidate.getClazz().equals(key.getClazz()))
+                .findFirst()
+                .orElse(null);
+            if (matchingKey == null) {
+                return;
+            }
+            fields = typeFallbackFields;
         } else {
-            if (!key.equals(newBean.getKey())) {
+            if (!key.getClazz().equals(newBean.getKey().getClazz())
+                || !key.getName().equalsIgnoreCase(newBean.getKey().getName())) {
                 return;
             }
             dependency = newBean.getObject();
         }
 
-        context.getInjectionFailures().remove(key);
+        context.getInjectionFailures().remove(matchingKey);
         fields.forEach(field -> field.set(dependency));
     }
 
