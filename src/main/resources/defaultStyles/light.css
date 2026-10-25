@@ -857,3 +857,77 @@
 .form-submit-button {
     -fx-alignment: center;
 }
+
+/* Material 标签页 */
+
+.material-tab-pane {
+    -fx-primary: #4a90d9;
+    -fx-surface: #ffffff;
+    -fx-surface-container: #f5f7fa;
+    -fx-on-surface: #333333;
+    -fx-on-surface-variant: #666666;
+    -fx-divider: #e8ecf1;
+
+    -fx-background-color: -fx-surface;
+    -fx-background-radius: 6px;
+    -fx-border-color: #e8ecf1;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+}
+
+.material-tab-pane .tab-header-bar {
+    -fx-background-color: -fx-surface-container;
+    -fx-border-color: transparent transparent -fx-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 0 8px 0 8px;
+}
+
+.material-tab-pane .material-tab-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-on-surface-variant;
+    -fx-font-size: 13px;
+    -fx-min-height: 36px;
+    -fx-pref-height: 36px;
+    -fx-padding: 0 14px;
+    -fx-cursor: hand;
+    -fx-background-radius: 4px 4px 0 0;
+}
+
+.material-tab-pane .material-tab-button:hover {
+    -fx-background-color: #eaf3fb;
+    -fx-text-fill: #333333;
+}
+
+.material-tab-pane .material-tab-button:selected {
+    -fx-background-color: -fx-surface;
+    -fx-text-fill: -fx-primary;
+}
+
+.material-tab-pane .tab-indicator {
+    -fx-fill: -fx-primary;
+}
+
+.material-tab-pane .tab-content-area {
+    -fx-padding: 16px;
+    -fx-background-color: transparent;
+}
+
+.material-tab-pane .tab-trailing-box {
+    -fx-spacing: 8px;
+    -fx-padding: 0 4px;
+}
+
+.icon-action-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-on-surface-variant;
+    -fx-cursor: hand;
+    -fx-padding: 4px 10px;
+    -fx-background-radius: 14px;
+    -fx-border-color: -fx-divider;
+    -fx-border-radius: 14px;
+}
+
+.icon-action-btn:hover {
+    -fx-background-color: #eaf3fb;
+    -fx-text-fill: -fx-primary;
+}
