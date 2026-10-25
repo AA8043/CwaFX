@@ -18,7 +18,17 @@ public class ModalController<N extends Node> {
     @Getter
     private Runnable onClose;
 
+    private boolean closing;
+
     public void close() {
+        if (closing) {
+            return;
+        }
+        closing = true;
+        window.closeModal(this);
+    }
+
+    void finishClose() {
         window.getPane().getChildren().remove(modalPane);
         if (onClose != null) {
             onClose.run();

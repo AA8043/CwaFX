@@ -2,10 +2,8 @@ package org.a8043.cwaFX.window;
 
 import animatefx.animation.*;
 import cn.hutool.core.util.ReflectUtil;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.PauseTransition;
-import javafx.animation.Timeline;
+import javafx.animation.*;
+import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -131,39 +129,118 @@ public class Window {
         }
     }
 
+    private static final Duration MODAL_OPEN_DURATION  = Duration.millis(220);
+    private static final Duration MODAL_CLOSE_DURATION = Duration.millis(180);
+
     public <N extends Node> ModalController<N> showModal(String name, N node) {
         VBox modal = new VBox();
         modal.getStyleClass().add("modal");
 
-        Button closeButton = new Button("x");
+        Button closeButton = new Button("×");
         closeButton.getStyleClass().add("modal-close-button");
 
-        BorderPane titleBar = new BorderPane(new Label(name),
-            null, closeButton, null, null);
-        titleBar.setMaxHeight(5);
-        modal.getChildren().addAll(titleBar, new Separator());
+        Label titleLabel = new Label(name);
+        titleLabel.getStyleClass().add("modal-title");
 
-        modal.getChildren().add(node);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox titleBar = new HBox(titleLabel, spacer, closeButton);
+        titleBar.getStyleClass().add("modal-header");
+        titleBar.setAlignment(Pos.CENTER_LEFT);
+
+        VBox contentBox = new VBox(node);
+        contentBox.getStyleClass().add("modal-content");
+
+        modal.getChildren().addAll(titleBar, contentBox);
 
         AnchorPane modalPane = new AnchorPane(modal);
         modalPane.getStyleClass().add("modal-bg");
         ModalController<N> controller = new ModalController<>(this, node, modalPane);
 
-        node.layoutBoundsProperty().addListener((obd, oldValue, newValue) -> {
-            double x = (pane.getWidth() - newValue.getWidth()) / 2;
-            AnchorPane.setRightAnchor(modal, pane.getWidth() - (x + newValue.getWidth()));
-            AnchorPane.setLeftAnchor(modal, x);
+        Runnable recenter = () -> {
+            double w = modal.getWidth();
+            double h = modal.getHeight();
+            if (w <= 0 || h <= 0) {
+                return;
+            }
+            AnchorPane.setLeftAnchor(modal, (pane.getWidth() - w) / 2);
+            AnchorPane.setTopAnchor(modal, (pane.getHeight() - h) / 2);
+        };
 
-            double y = (pane.getHeight() - newValue.getHeight()) / 2;
-            AnchorPane.setTopAnchor(modal, y);
-            AnchorPane.setBottomAnchor(modal, pane.getHeight() - (y + newValue.getHeight()));
-        });
+        modal.widthProperty().addListener((obs, o, n) -> recenter.run());
+        modal.heightProperty().addListener((obs, o, n) -> recenter.run());
+        pane.widthProperty().addListener((obs, o, n) -> recenter.run());
+        pane.heightProperty().addListener((obs, o, n) -> recenter.run());
 
         closeButton.setOnAction(e -> controller.close());
 
+        modalPane.setOpacity(0);
         pane.getChildren().add(modalPane);
-        new FadeIn(modalPane).play();
+
+        pane.applyCss();
+        pane.layout();
+        recenter.run();
+
+        Platform.runLater(() -> {
+            recenter.run();
+            buildOpenAnimation(modalPane, modal).play();
+        });
+
         return controller;
+    }
+
+    private static Animation buildOpenAnimation(AnchorPane modalPane, Node modal) {
+        FadeTransition bg = new FadeTransition(MODAL_OPEN_DURATION, modalPane);
+        bg.setFromValue(0);
+        bg.setToValue(1);
+
+        Timeline content = new Timeline(
+            new KeyFrame(Duration.ZERO,
+                new KeyValue(modal.scaleXProperty(), 0.94, Interpolator.EASE_OUT),
+                new KeyValue(modal.scaleYProperty(), 0.94, Interpolator.EASE_OUT),
+                new KeyValue(modal.opacityProperty(), 0, Interpolator.EASE_OUT)),
+            new KeyFrame(MODAL_OPEN_DURATION,
+                new KeyValue(modal.scaleXProperty(), 1, Interpolator.EASE_OUT),
+                new KeyValue(modal.scaleYProperty(), 1, Interpolator.EASE_OUT),
+                new KeyValue(modal.opacityProperty(), 1, Interpolator.EASE_OUT))
+        );
+
+        return new ParallelTransition(bg, content);
+    }
+
+    void closeModal(ModalController<?> controller) {
+        AnchorPane modalPane = controller.getModalPane();
+
+        if (!pane.getChildren().contains(modalPane)) {
+            controller.finishClose();
+            return;
+        }
+
+        Node modal = modalPane.getChildren().isEmpty() ? null : modalPane.getChildren().get(0);
+
+        FadeTransition bg = new FadeTransition(MODAL_CLOSE_DURATION, modalPane);
+        bg.setToValue(0);
+
+        Animation closeAnim;
+        if (modal == null) {
+            closeAnim = bg;
+        } else {
+            Timeline content = new Timeline(
+                new KeyFrame(Duration.ZERO,
+                    new KeyValue(modal.scaleXProperty(), modal.getScaleX(), Interpolator.EASE_IN),
+                    new KeyValue(modal.scaleYProperty(), modal.getScaleY(), Interpolator.EASE_IN),
+                    new KeyValue(modal.opacityProperty(), modal.getOpacity(), Interpolator.EASE_IN)),
+                new KeyFrame(MODAL_CLOSE_DURATION,
+                    new KeyValue(modal.scaleXProperty(), 0.94, Interpolator.EASE_IN),
+                    new KeyValue(modal.scaleYProperty(), 0.94, Interpolator.EASE_IN),
+                    new KeyValue(modal.opacityProperty(), 0, Interpolator.EASE_IN))
+            );
+            closeAnim = new ParallelTransition(bg, content);
+        }
+
+        closeAnim.setOnFinished(e -> controller.finishClose());
+        closeAnim.play();
     }
 
     public void showTipModal(String text) {
@@ -242,7 +319,7 @@ public class Window {
         Label titleLabel = new Label(title);
         titleLabel.getStyleClass().add("notification-title");
 
-        Button closeButton = new Button("x");
+        Button closeButton = new Button("×");
         closeButton.getStyleClass().add("modal-close-button");
 
         Region spacer = new Region();
