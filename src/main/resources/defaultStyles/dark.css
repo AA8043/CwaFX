@@ -797,6 +797,37 @@
     -fx-padding: 2px 6px;
 }
 
+/* Material 开关 */
+
+.material-switch {
+    -fx-switch-color: #5a9fe6;
+    -fx-switch-track-color: #3d434f;
+    -fx-switch-thumb-color: #1e2129;
+    -fx-switch-unselected-thumb-color: #9aa2b0;
+    -fx-cursor: hand;
+}
+
+.material-switch:hover {
+    -fx-switch-color: #7bb3ef;
+}
+
+.material-switch:focused .switch-track {
+    -fx-effect: dropshadow(gaussian, rgba(90, 159, 230, 0.35), 4, 0, 0, 0);
+}
+
+.material-switch .switch-label {
+    -fx-text-fill: #e4e6eb;
+    -fx-font-size: 14px;
+}
+
+.material-switch:disabled {
+    -fx-cursor: default;
+}
+
+.material-switch:disabled .switch-label {
+    -fx-opacity: 0.38;
+}
+
 /* 浮动标签 */
 
 .material-text-field {

@@ -17,6 +17,55 @@ public class MainController {
 
 框架会把该 Bean 作为 controller。FXML 中的资源由 `I18n` 当前语言包提供。
 
+## MaterialSwitch 开关
+
+`MaterialSwitch` 与 `MaterialSpinner` 一样直接继承 `Region`，无需额外样式表即可使用。
+开关本体默认尺寸为 52 × 32，可用 `new MaterialSwitch(40)` 指定高度并保持宽高比例，或通过布局尺寸缩放。
+`defaultStyles/light.css` 和 `defaultStyles/dark.css` 已包含浅色、深色配色，以及文字、焦点和禁用样式。
+
+```java
+MaterialSwitch toggle = new MaterialSwitch("启用通知");
+toggle.setText("自动保存"); // 显示在开关旁的说明文字，支持 textProperty() 绑定
+toggle.setTooltip(new Tooltip("启用后自动保存修改")); // 鼠标悬停提示
+toggle.setSelected(true);
+toggle.selectedProperty().addListener((observable, oldValue, selected) -> {
+    // 响应选中状态变化，也可以使用 bindBidirectional 与业务属性同步
+});
+toggle.setOnAction(event -> {
+    // 响应用户操作或 fire()；setSelected() 不触发 ActionEvent
+});
+```
+
+支持鼠标左键、空格键、回车键和辅助技术激活；禁用时不响应操作。
+`selectedProperty()` 单向绑定时通过绑定源控制状态，双向绑定时可直接操作开关。
+切换动画默认开启，可用 `setAnimated(false)` 关闭；隐藏、移出场景或禁用时立即收束到当前状态。
+
+颜色可以通过对应的 `Paint` 属性或 CSS 配置：
+
+```css
+.material-switch {
+    -fx-switch-color: #0071ff;                  /* 选中轨道 */
+    -fx-switch-track-color: #e0e3e7;            /* 未选中轨道 */
+    -fx-switch-thumb-color: white;             /* 选中滑块 */
+    -fx-switch-unselected-thumb-color: #74777f; /* 未选中滑块与边框 */
+}
+```
+
+说明文字会计入首选尺寸，点击文字同样可以切换状态；空文字不占用额外宽度。
+`tooltipProperty()` 支持绑定，替换或清空 Tooltip 会自动卸载旧提示。
+
+FXML 中可直接声明文字与悬停提示：
+
+```xml
+<?import org.a8043.cwaFX.components.MaterialSwitch?>
+<?import javafx.scene.control.Tooltip?>
+<MaterialSwitch text="自动保存" selected="true" animated="false">
+    <tooltip>
+        <Tooltip text="启用后自动保存修改"/>
+    </tooltip>
+</MaterialSwitch>
+```
+
 ## 窗口、模态框和通知
 
 ```java
