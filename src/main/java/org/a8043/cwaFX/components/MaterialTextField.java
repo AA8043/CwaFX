@@ -6,11 +6,14 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.property.*;
 import javafx.css.PseudoClass;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Region;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.Shape;
 import javafx.scene.transform.Scale;
 import javafx.util.Duration;
 import lombok.Getter;
@@ -26,7 +29,7 @@ public class MaterialTextField extends Region {
     private static final PseudoClass PSEUDO_ERROR = PseudoClass.getPseudoClass("mtf-error");
 
     private static final double LABEL_SCALE = 0.75;
-    private static final double LINE_HEIGHT = 2;
+    private static final double FIELD_PADDING = 4;
     private static final double LABEL_GAP = 4;
     private static final double HELPER_GAP = 4;
     private static final Duration ANIM_DURATION = Duration.millis(150);
@@ -35,10 +38,13 @@ public class MaterialTextField extends Region {
     private TextField textField;
     private final Label floatingLabel = new Label();
     private final Label helperLabel = new Label();
-    private final Region baseLine = new Region();
-    private final Region focusLine = new Region();
+    private final Region outline = new Region();
+    private final Region focusOutline = new Region();
 
     private final Scale labelScale = new Scale(1, 1);
+    private final DoubleProperty floatProgress = new SimpleDoubleProperty(0);
+    private Timeline labelAnimation;
+    private Timeline focusAnimation;
 
     @Getter
     private final BooleanProperty error = new SimpleBooleanProperty(false);
@@ -47,7 +53,6 @@ public class MaterialTextField extends Region {
 
     private double floatTranslateY = 0;
     private boolean floating = false;
-    private boolean animating = false;
 
     public MaterialTextField() {
         this("");
@@ -57,17 +62,21 @@ public class MaterialTextField extends Region {
         getStyleClass().add("material-text-field");
         floatingLabel.getStyleClass().add("mtf-label");
         helperLabel.getStyleClass().add("mtf-helper");
-        baseLine.getStyleClass().add("mtf-base-line");
-        focusLine.getStyleClass().add("mtf-focus-line");
+        outline.getStyleClass().add("mtf-outline");
+        focusOutline.getStyleClass().add("mtf-focus-outline");
 
         floatingLabel.setText(labelText);
         floatingLabel.setMouseTransparent(true);
         floatingLabel.getTransforms().add(labelScale);
+        floatingLabel.boundsInParentProperty().addListener((o, oldBounds, newBounds) -> updateOutlineClips());
+        floatProgress.addListener((o, oldValue, newValue) -> updateLabelPosition());
 
-        focusLine.setScaleX(0);
+        outline.setMouseTransparent(true);
+        focusOutline.setMouseTransparent(true);
+        focusOutline.setOpacity(0);
 
         replaceTextField(new TextField());
-        getChildren().addAll(baseLine, focusLine, textField, floatingLabel, helperLabel);
+        getChildren().addAll(outline, focusOutline, textField, floatingLabel, helperLabel);
 
         text.addListener((o, ol, ne) -> refreshFilled());
         type.addListener((o, oldType, newType) -> replaceTextField(createTextField(newType)));
@@ -111,7 +120,7 @@ public class MaterialTextField extends Region {
 
     private void onFocusChanged(boolean focused) {
         pseudoClassStateChanged(PSEUDO_FOCUSED, focused);
-        animateFocusLine(focused);
+        animateFocusOutline(focused);
         updateFloatingState();
     }
 
@@ -131,24 +140,54 @@ public class MaterialTextField extends Region {
     }
 
     private void animateLabel(boolean toFloat) {
-        animating = true;
-        double targetScale = toFloat ? LABEL_SCALE : 1.0;
-        double targetY = toFloat ? floatTranslateY : 0;
-
-        Timeline tl = new Timeline(new KeyFrame(ANIM_DURATION,
-            new KeyValue(labelScale.xProperty(), targetScale, Interpolator.EASE_BOTH),
-            new KeyValue(labelScale.yProperty(), targetScale, Interpolator.EASE_BOTH),
-            new KeyValue(floatingLabel.translateYProperty(), targetY, Interpolator.EASE_BOTH)
+        if (labelAnimation != null) {
+            labelAnimation.stop();
+        }
+        labelAnimation = new Timeline(new KeyFrame(ANIM_DURATION,
+            new KeyValue(floatProgress, toFloat ? 1 : 0, Interpolator.EASE_BOTH)
         ));
-        tl.setOnFinished(e -> animating = false);
-        tl.play();
+        labelAnimation.play();
     }
 
-    private void animateFocusLine(boolean focused) {
-        Timeline tl = new Timeline(new KeyFrame(ANIM_DURATION,
-            new KeyValue(focusLine.scaleXProperty(), focused ? 1 : 0, Interpolator.EASE_BOTH)
+    private void updateLabelPosition() {
+        double scale = 1 - (1 - LABEL_SCALE) * floatProgress.get();
+        labelScale.setX(scale);
+        labelScale.setY(scale);
+        floatingLabel.setTranslateY(floatTranslateY * floatProgress.get());
+        updateOutlineClips();
+    }
+
+    private void updateOutlineClips() {
+        Bounds labelBounds = floatingLabel.getBoundsInParent();
+        clipOutline(outline, labelBounds);
+        clipOutline(focusOutline, labelBounds);
+    }
+
+    private void clipOutline(Region border, Bounds labelBounds) {
+        double labelY = labelBounds.getMinY() - border.getLayoutY();
+        if (floatingLabel.getText() == null || floatingLabel.getText().isEmpty()
+            || labelY > 2 || labelY + labelBounds.getHeight() < 0) {
+            border.setClip(null);
+            return;
+        }
+
+        double gapStart = Math.max(4, labelBounds.getMinX() - border.getLayoutX() - LABEL_GAP);
+        double gapEnd = Math.min(border.getWidth() - 4,
+            labelBounds.getMaxX() - border.getLayoutX() + LABEL_GAP);
+        // Cut out the border itself so the label works on any background.
+        border.setClip(Shape.subtract(new Rectangle(border.getWidth(), border.getHeight()),
+            new Rectangle(gapStart, 0, Math.max(0, gapEnd - gapStart),
+                Math.max(0, labelY + labelBounds.getHeight() + 2))));
+    }
+
+    private void animateFocusOutline(boolean focused) {
+        if (focusAnimation != null) {
+            focusAnimation.stop();
+        }
+        focusAnimation = new Timeline(new KeyFrame(ANIM_DURATION,
+            new KeyValue(focusOutline.opacityProperty(), focused ? 1 : 0, Interpolator.EASE_BOTH)
         ));
-        tl.play();
+        focusAnimation.play();
     }
 
     @Override
@@ -158,45 +197,43 @@ public class MaterialTextField extends Region {
         Insets pad = getInsets();
 
         double left = pad.getLeft();
-        double top = pad.getTop();
+        double labelW = floatingLabel.prefWidth(-1);
+        double labelH = floatingLabel.prefHeight(labelW);
+        double top = pad.getTop() + labelH * LABEL_SCALE / 2;
         double bottom = pad.getBottom();
-        double contentW = w - left - pad.getRight();
+        double contentW = Math.max(0, w - left - pad.getRight());
 
-        double helperH = helperLabel.prefHeight(contentW);
+        boolean hasHelper = helperLabel.getText() != null && !helperLabel.getText().isEmpty();
+        double helperH = hasHelper ? helperLabel.prefHeight(contentW) : 0;
         double fieldH = textField.prefHeight(contentW);
 
         double helperY = h - bottom - helperH;
-        double lineY = helperY - LINE_HEIGHT - HELPER_GAP;
-        double fieldY = lineY - fieldH;
+        double outlineH = Math.max(0, helperY - (hasHelper ? HELPER_GAP : 0) - top);
+        double fieldY = top + (outlineH - fieldH) / 2;
 
         textField.resizeRelocate(left, fieldY, contentW, fieldH);
-        baseLine.resizeRelocate(left, lineY, contentW, LINE_HEIGHT);
-        focusLine.resizeRelocate(left, lineY, contentW, LINE_HEIGHT);
+        outline.resizeRelocate(left, top, contentW, outlineH);
+        focusOutline.resizeRelocate(left, top, contentW, outlineH);
         helperLabel.resizeRelocate(left, helperY, contentW, helperH);
 
-        double labelW = floatingLabel.prefWidth(-1);
-        double labelH = floatingLabel.prefHeight(labelW);
-        double labelBaseY = fieldY + (fieldH - labelH) / 2;
+        double labelBaseY = top + (outlineH - labelH) / 2;
         double labelX = left + textField.getInsets().getLeft();
-        floatingLabel.resizeRelocate(labelX, labelBaseY, labelW, labelH);
+        floatingLabel.resizeRelocate(labelX, labelBaseY,
+            Math.max(0, Math.min(labelW, contentW - 2 * textField.getInsets().getLeft())), labelH);
 
-        floatTranslateY = top - labelBaseY;
-
-        if (!animating) {
-            double s = floating ? LABEL_SCALE : 1.0;
-            labelScale.setX(s);
-            labelScale.setY(s);
-            floatingLabel.setTranslateY(floating ? floatTranslateY : 0);
-        }
+        floatTranslateY = top - labelH * LABEL_SCALE / 2 - labelBaseY;
+        updateLabelPosition();
     }
 
     @Override
     protected double computePrefHeight(double width) {
         Insets pad = getInsets();
-        double fieldH = textField.prefHeight(width);
-        double helperH = helperLabel.prefHeight(width);
-        double floatArea = floatingLabel.prefHeight(-1) * LABEL_SCALE + LABEL_GAP;
-        return pad.getTop() + floatArea + fieldH + LINE_HEIGHT + HELPER_GAP + helperH + pad.getBottom();
+        double contentW = width < 0 ? -1 : Math.max(0, width - pad.getLeft() - pad.getRight());
+        double fieldH = textField.prefHeight(contentW);
+        boolean hasHelper = helperLabel.getText() != null && !helperLabel.getText().isEmpty();
+        double helperH = hasHelper ? HELPER_GAP + helperLabel.prefHeight(contentW) : 0;
+        double floatArea = floatingLabel.prefHeight(-1) * LABEL_SCALE / 2;
+        return pad.getTop() + FIELD_PADDING * 2 + floatArea + fieldH + helperH + pad.getBottom();
     }
 
     @Override

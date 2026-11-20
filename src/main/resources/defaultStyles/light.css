@@ -845,7 +845,7 @@
     -fx-border-color: rgb(0, 0, 0, 0);
     -fx-background-insets: 0;
     -fx-background-radius: 0;
-    -fx-padding: 4 0 4 0;
+    -fx-padding: 2 12 2 12;
     -fx-text-fill: -mtf-text;
     -fx-font-size: 14px;
     -fx-prompt-text-fill: rgb(0, 0, 0, 0);
@@ -864,18 +864,22 @@
     -fx-text-fill: -mtf-accent;
 }
 
-.material-text-field .mtf-base-line {
-    -fx-background-color: -mtf-base;
+.material-text-field .mtf-outline {
+    -fx-border-color: -mtf-base;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
 }
 
-.material-text-field .mtf-focus-line {
-    -fx-background-color: -mtf-accent;
+.material-text-field .mtf-focus-outline {
+    -fx-border-color: -mtf-accent;
+    -fx-border-width: 2;
+    -fx-border-radius: 4;
 }
 
 .material-text-field .mtf-helper {
     -fx-text-fill: -mtf-label;
     -fx-font-size: 12px;
-    -fx-padding: 2 0 0 0;
+    -fx-padding: 2 12 0 12;
 }
 
 .material-text-field:mtf-error .mtf-label,
@@ -883,9 +887,9 @@
     -fx-text-fill: -mtf-error;
 }
 
-.material-text-field:mtf-error .mtf-base-line,
-.material-text-field:mtf-error .mtf-focus-line {
-    -fx-background-color: -mtf-error;
+.material-text-field:mtf-error .mtf-outline,
+.material-text-field:mtf-error .mtf-focus-outline {
+    -fx-border-color: -mtf-error;
 }
 
 .material-text-field:mtf-error .mtf-helper {
