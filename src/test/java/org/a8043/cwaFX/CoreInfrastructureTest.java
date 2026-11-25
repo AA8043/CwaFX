@@ -46,10 +46,32 @@ class CoreInfrastructureTest {
     }
 
     @Test
-    void contextReturnsNullWhenItCannotConstructABean() {
+    void contextReportsWhenItCannotConstructABean() {
         AppContext context = new CwaFX(CoreInfrastructureTest.class, new String[0]).getContext();
 
-        assertNull(context.getBean(PrivateConstructorBean.class, ""));
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+            () -> context.getBean(PrivateConstructorBean.class, ""));
+        assertTrue(failure.getMessage().contains(PrivateConstructorBean.class.getName()));
+    }
+
+    @Test
+    void resolvesPrimitiveConstructorParametersAndPreservesConstructorCause() {
+        AppContext context = new CwaFX(CoreInfrastructureTest.class, new String[0]).getContext();
+
+        PrimitiveBean primitive = context.getBean(PrimitiveBean.class, "", Integer.valueOf(42));
+        assertEquals(42, primitive.value);
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+            () -> context.getBean(ThrowingBean.class, ""));
+        assertInstanceOf(IllegalArgumentException.class, failure.getCause());
+    }
+
+    @Test
+    void rejectsAmbiguousOverloadsAndAllowsNullForReferenceParameters() {
+        AppContext context = new CwaFX(CoreInfrastructureTest.class, new String[0]).getContext();
+
+        assertThrows(IllegalStateException.class,
+            () -> context.getBean(AmbiguousBean.class, "", Integer.valueOf(1)));
+        assertNull(context.getBean(NullableBean.class, "", (Object) null).value);
     }
 
     @Test
@@ -87,6 +109,25 @@ class CoreInfrastructureTest {
     public static class PrivateConstructorBean {
         private PrivateConstructorBean() {
         }
+    }
+
+    public static class PrimitiveBean {
+        private final int value;
+        public PrimitiveBean(int value) { this.value = value; }
+    }
+
+    public static class ThrowingBean {
+        public ThrowingBean() { throw new IllegalArgumentException("constructor failure"); }
+    }
+
+    public static class AmbiguousBean {
+        public AmbiguousBean(Number number) { }
+        public AmbiguousBean(java.io.Serializable serializable) { }
+    }
+
+    public static class NullableBean {
+        private final String value;
+        public NullableBean(String value) { this.value = value; }
     }
 
     @Bean

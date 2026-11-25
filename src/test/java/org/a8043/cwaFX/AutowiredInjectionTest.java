@@ -197,6 +197,31 @@ class AutowiredInjectionTest {
         }
     }
 
+    @Test
+    void resolvesEveryPendingFieldAndNeverFallsBackForExplicitNames() {
+        CwaFX cwaFX = new CwaFX(MultiPendingConsumer.class, new String[0]);
+        AppContext context = cwaFX.getContext();
+        context.getClasses().getClassMap().put(MultiPendingConsumer.class,
+            Arrays.stream(MultiPendingConsumer.class.getAnnotations()).toList());
+
+        MultiPendingConsumer consumer = new MultiPendingConsumer();
+        context.addBean(new BeanKey(MultiPendingConsumer.class, "consumer"), consumer);
+        Rectangle unrelated = new Rectangle();
+        context.addBean(new BeanKey(Node.class, "unrelated"), unrelated);
+        assertNull(consumer.required);
+        assertNull(consumer.first);
+        assertNull(consumer.second);
+
+        Node first = new Rectangle();
+        Node second = new Rectangle();
+        context.addBean(new BeanKey(Node.class, "first"), first);
+        context.addBean(new BeanKey(Node.class, "second"), second);
+
+        assertSame(first, consumer.first);
+        assertSame(second, consumer.second);
+        assertNull(consumer.required);
+    }
+
     @SuppressWarnings("unchecked")
     private static List<AnnotationHandler<?>> annotationHandlers() throws ReflectiveOperationException {
         Field field = CwaFX.class.getDeclaredField("ANNOTATION_HANDLERS");
@@ -251,4 +276,15 @@ class AutowiredInjectionTest {
     @Bean
     public static class EventReentrantBean {
     }
+
+    @Bean
+    public static class MultiPendingConsumer {
+        @Autowired(name = "required")
+        private Node required;
+        @Autowired(name = "first")
+        private Node first;
+        @Autowired(name = "second")
+        private Node second;
+    }
+
 }

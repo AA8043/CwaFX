@@ -11,9 +11,9 @@ import org.a8043.cwaFX.annotations.bean.*;
 import org.a8043.cwaFX.events.*;
 import org.a8043.cwaFX.userEvent.UserEventWrapper;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.lang.reflect.ParameterizedType;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @AutoService(AnnotationHandler.class)
@@ -32,8 +32,7 @@ public class BeanHandler implements AnnotationHandler<Bean> {
                 }
             }
 
-            case DestroyEvent ignored -> context.getClasses().getMethods(clazz, PreDestroy.class).forEach(method ->
-                context.getBeans(clazz).forEach(bean -> Util.invokeMethod(method, bean)));
+            case DestroyEvent ignored -> destroyBeans(clazz, context);
 
             case NewBeanEvent newBean -> {
                 if (newBean.getObject().getClass().equals(clazz)) {
@@ -65,86 +64,89 @@ public class BeanHandler implements AnnotationHandler<Bean> {
 
     private static void injectDependency(Class<?> clazz, AppContext context) {
         context.getClasses().getFields(clazz, Autowired.class).forEach(field ->
-            context.getBeans(clazz).forEach(bean -> {
-                String configuredName = field.getAnnotation(Autowired.class).name();
-                String dependencyName = configuredName.isEmpty() ? field.getName() : configuredName;
-                Object dependency = context.findBean(field.getType(), dependencyName);
-                if (dependency == null && configuredName.isEmpty()
-                    && !(field.getGenericType() instanceof ParameterizedType)) {
-                    dependency = context.findBean(field.getType(), "");
-                }
-                if (dependency == null) {
-                    log.debug("Inj fail: {}, ({})", dependencyName, field.getType());
-                    context.getInjectionFailures().computeIfAbsent(new BeanKey(field.getType(), dependencyName),
-                        k -> new ArrayList<>()).add(new FieldAccessor(field, bean));
-                    return;
-                }
+            context.getBeans(clazz).forEach(bean -> injectField(field, bean, context)));
+    }
 
-                field.setAccessible(true);
-                try {
-                    field.set(bean, dependency);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }));
+    public static void preparePageBean(Class<?> clazz, Object bean, AppContext context) {
+        for (java.lang.reflect.Field field : context.getClasses().getFields(clazz, Autowired.class)) {
+            Autowired annotation = field.getAnnotation(Autowired.class);
+            boolean explicitName = !annotation.name().isEmpty();
+            String name = explicitName ? annotation.name() : field.getName();
+            Object dependency = context.findBeanExact(field.getType(), name);
+            if (dependency == null && !explicitName && !(field.getGenericType() instanceof ParameterizedType)) {
+                dependency = context.findBean(field.getType(), "");
+            }
+            if (dependency == null) {
+                throw new IllegalStateException("Unresolved @Autowired page dependency "
+                    + clazz.getName() + "." + field.getName() + " named '" + name + "'");
+            }
+            new FieldAccessor(field, bean).set(dependency);
+        }
+        Util.getMethods(clazz, Initialize.class).forEach(method -> Util.invokeMethod(method, bean));
+    }
+
+    public static void destroyPageBean(Class<?> clazz, Object bean) {
+        Util.getMethods(clazz, PreDestroy.class).forEach(method -> Util.invokeMethod(method, bean));
+    }
+
+    private static void injectField(java.lang.reflect.Field field, Object bean, AppContext context) {
+        Autowired annotation = field.getAnnotation(Autowired.class);
+        boolean explicitName = !annotation.name().isEmpty();
+        String dependencyName = explicitName ? annotation.name() : field.getName();
+        FieldAccessor accessor = new FieldAccessor(field, bean);
+        Object dependency = context.findBeanExact(field.getType(), dependencyName);
+        boolean allowTypeFallback = !explicitName && !(field.getGenericType() instanceof ParameterizedType);
+        if (dependency == null && allowTypeFallback) {
+            dependency = context.findBean(field.getType(), "");
+        }
+        if (dependency == null) {
+            log.debug("Injection pending: {}.{} ({})", bean.getClass().getName(), field.getName(), field.getType());
+            context.recordInjectionFailure(accessor, dependencyName, explicitName, allowTypeFallback);
+            return;
+        }
+        accessor.set(dependency);
+        context.clearInjectionFailure(accessor);
     }
 
     private static void injectPendingDependencies(NewBeanEvent newBean, AppContext context) {
-        if (!newBean.getKey().getName().isEmpty()) {
-            injectPendingDependencies(newBean.getKey(), newBean, context);
-        }
-        injectPendingDependencies(new BeanKey(newBean.getKey().getClazz(), ""), newBean, context);
-    }
+        for (Map.Entry<FieldAccessor, AppContext.PendingDependency> entry : context.pendingInjections().entrySet()) {
+            FieldAccessor accessor = entry.getKey();
+            AppContext.PendingDependency pending = entry.getValue();
+            java.lang.reflect.Field field = accessor.getField();
+            if (!newBean.getKey().getClazz().equals(field.getType())) continue;
 
-    private static void injectPendingDependencies(BeanKey key, NewBeanEvent newBean, AppContext context) {
-        BeanKey matchingKey = context.getInjectionFailures().keySet().stream()
-            .filter(candidate -> candidate.getClazz().equals(key.getClazz()))
-            .filter(candidate -> key.getName().isEmpty()
-                || candidate.getName().equalsIgnoreCase(key.getName()))
-            .findFirst()
-            .orElse(null);
-        List<FieldAccessor> fields = matchingKey == null ? null : context.getInjectionFailures().get(matchingKey);
-        if (fields == null) {
-            return;
+            boolean exactName = newBean.getKey().getName().equalsIgnoreCase(pending.name());
+            Object dependency = exactName ? newBean.getObject() : null;
+            if (dependency == null && pending.typeFallback()) {
+                dependency = context.findBean(field.getType(), "");
+            }
+            if (dependency != null) {
+                accessor.set(dependency);
+                context.clearInjectionFailure(accessor);
+            }
         }
-
-        Object dependency;
-        if (key.getName().isEmpty()) {
-            List<FieldAccessor> typeFallbackFields = fields.stream()
-                .filter(field -> !(field.getField().getGenericType() instanceof ParameterizedType))
-                .toList();
-            if (typeFallbackFields.isEmpty()) {
-                return;
-            }
-            List<Object> beans = context.getBeansByKeyClass(key.getClazz());
-            if (beans.size() != 1) {
-                return;
-            }
-            dependency = beans.getFirst();
-            matchingKey = context.getInjectionFailures().keySet().stream()
-                .filter(candidate -> candidate.getClazz().equals(key.getClazz()))
-                .findFirst()
-                .orElse(null);
-            if (matchingKey == null) {
-                return;
-            }
-            fields = typeFallbackFields;
-        } else {
-            if (!key.getClazz().equals(newBean.getKey().getClazz())
-                || !key.getName().equalsIgnoreCase(newBean.getKey().getName())) {
-                return;
-            }
-            dependency = newBean.getObject();
-        }
-
-        context.getInjectionFailures().remove(matchingKey);
-        fields.forEach(field -> field.set(dependency));
     }
 
     private static void initializeBean(Class<?> clazz, Object bean, AppContext context) {
         if (context.markBeanInitialized(bean)) {
             Util.getMethods(clazz, Initialize.class).forEach(method -> Util.invokeMethod(method, bean));
         }
+    }
+
+    private static void destroyBeans(Class<?> clazz, AppContext context) {
+        Throwable failure = null;
+        for (java.lang.reflect.Method method : context.getClasses().getMethods(clazz, PreDestroy.class)) {
+            for (Object bean : context.getBeans(clazz)) {
+                try {
+                    Util.invokeMethod(method, bean);
+                } catch (RuntimeException | Error destroyFailure) {
+                    if (failure == null) failure = destroyFailure;
+                    else failure.addSuppressed(destroyFailure);
+                }
+            }
+        }
+        if (failure instanceof Error error) throw error;
+        if (failure != null) throw new IllegalStateException("One or more bean cleanup callbacks failed", failure);
     }
 
     @Override

@@ -17,4 +17,14 @@ public class FieldAccessor {
         field.setAccessible(true);
         field.set(object, value);
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof FieldAccessor accessor && field == accessor.field && object == accessor.object;
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * System.identityHashCode(field) + System.identityHashCode(object);
+    }
 }
