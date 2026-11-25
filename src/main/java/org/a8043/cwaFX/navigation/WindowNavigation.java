@@ -14,6 +14,7 @@ public final class WindowNavigation {
     private final PageRegistry pageRegistry;
     private final Consumer<Node> displayPage;
     private final Deque<PageEntry> history = new ArrayDeque<>();
+    private final Object owner = new Object();
     private PageEntry current;
 
     public WindowNavigation(PageRegistry pageRegistry, Consumer<Node> displayPage) {
@@ -26,18 +27,31 @@ public final class WindowNavigation {
     }
 
     public <T, R> void navigate(String pageName, T parameter, Consumer<? super R> onResult) {
-        PageEntry next = PageEntry.forPage(pageRegistry.get(pageName), parameter, onResult);
-        if (current != null) {
-            history.push(current);
+        PageEntry next = PageEntry.forPage(pageRegistry.get(pageName).create(), parameter, onResult, owner);
+        PageEntry previous = current;
+        try {
+            activate(next);
+        } catch (RuntimeException | Error failure) {
+            restore(previous, failure);
+            next.dispose();
+            throw failure;
         }
+        if (previous != null) history.push(previous);
         current = next;
-        activate(current);
     }
 
     public <T> void replace(String pageName, T parameter) {
-        PageEntry next = PageEntry.forPage(pageRegistry.get(pageName), parameter, null);
+        PageEntry next = PageEntry.forPage(pageRegistry.get(pageName).create(), parameter, null, owner);
+        PageEntry previous = current;
+        try {
+            activate(next);
+        } catch (RuntimeException | Error failure) {
+            restore(previous, failure);
+            next.dispose();
+            throw failure;
+        }
         current = next;
-        activate(current);
+        if (previous != null) previous.dispose();
     }
 
     public boolean canGoBack() {
@@ -54,9 +68,19 @@ public final class WindowNavigation {
         }
 
         PageEntry leaving = current;
+        PageEntry target = history.peek();
+        try {
+            activate(target);
+        } catch (RuntimeException | Error failure) {
+            restore(leaving, failure);
+            throw failure;
+        }
         current = history.pop();
-        activate(current);
-        leaving.deliverResult(result);
+        try {
+            leaving.deliverResult(result);
+        } finally {
+            leaving.dispose();
+        }
     }
 
     private void activate(PageEntry entry) {
@@ -64,9 +88,42 @@ public final class WindowNavigation {
         displayPage.accept(entry.node());
     }
 
-    private record PageEntry(Node node, Object controller, Object parameter, Consumer<Object> onResult) {
-        private static PageEntry forPage(PageDefinition page, Object parameter, Consumer<?> onResult) {
-            return new PageEntry(page.getNode(), page.getController(), parameter, castResultConsumer(onResult));
+    private void restore(PageEntry entry, Throwable failure) {
+        try {
+            displayPage.accept(entry == null ? null : entry.node());
+        } catch (RuntimeException | Error restoreFailure) {
+            failure.addSuppressed(restoreFailure);
+        }
+    }
+
+    public void close() {
+        RuntimeException failure = null;
+        if (current != null) {
+            try {
+                current.dispose();
+            } catch (RuntimeException exception) {
+                failure = exception;
+            }
+        }
+        for (PageEntry entry : history) {
+            try {
+                entry.dispose();
+            } catch (RuntimeException exception) {
+                if (failure == null) failure = exception;
+                else failure.addSuppressed(exception);
+            }
+        }
+        history.clear();
+        current = null;
+        if (failure != null) throw failure;
+    }
+
+    private record PageEntry(Node node, Object controller, Object parameter, Consumer<Object> onResult,
+                             PageDefinition page, Object owner) {
+        private static PageEntry forPage(PageDefinition page, Object parameter, Consumer<?> onResult, Object owner) {
+            page.claim(owner);
+            return new PageEntry(page.getNode(), page.getController(), parameter, castResultConsumer(onResult),
+                page, owner);
         }
 
         @SuppressWarnings("unchecked")
@@ -80,6 +137,10 @@ public final class WindowNavigation {
             if (onResult != null) {
                 onResult.accept(result);
             }
+        }
+
+        private void dispose() {
+            page.release(owner);
         }
 
         @SuppressWarnings({"rawtypes", "unchecked"})

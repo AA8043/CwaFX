@@ -1,6 +1,5 @@
 package org.a8043.cwaFX.window;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.json.JSONObject;
 import javafx.collections.FXCollections;
@@ -14,6 +13,7 @@ import org.a8043.cwaFX.AppContext;
 import org.a8043.cwaFX.BeanKey;
 import org.a8043.cwaFX.CwaFX;
 import org.a8043.cwaFX.I18n;
+import org.a8043.cwaFX.JsonFileStore;
 import org.a8043.cwaFX.events.DestroyEvent;
 
 import java.io.File;
@@ -38,16 +38,42 @@ public class WindowCreator {
         this.context = context;
 
         File statusFile = new File(context.getCwaFX().getConfig().getSettingsBaseDir(), "windowStatus.json");
-        if (statusFile.exists()) {
-            statusJson = new JSONObject(FileUtil.readUtf8String(statusFile));
-        } else {
-            statusJson = new JSONObject();
+        JSONObject loaded = JsonFileStore.read(statusFile, context.getCwaFX(), WindowStatus.class);
+        try {
+            for (String name : loaded.keySet()) {
+                if (loaded.getJSONObject(name) == null) throw new IllegalArgumentException("Invalid window status: " + name);
+                loaded.getJSONObject(name).toBean(WindowStatus.class);
+            }
+        } catch (RuntimeException failure) {
+            JsonFileStore.reportCorruption(statusFile, context.getCwaFX(), WindowStatus.class, failure);
+            loaded = new JSONObject();
         }
+        statusJson = loaded;
         context.getCwaFX().addOnEvent(e -> {
             if (e instanceof DestroyEvent) {
-                FileUtil.writeUtf8String(statusJson.toString(), statusFile);
+                Throwable failure = null;
+                for (Window window : List.copyOf(windows)) {
+                    try {
+                        window.closeNavigation();
+                    } catch (RuntimeException | Error closeFailure) {
+                        failure = appendFailure(failure, closeFailure);
+                    }
+                }
+                try {
+                    JsonFileStore.write(statusFile, statusJson.toString());
+                } catch (RuntimeException | Error writeFailure) {
+                    failure = appendFailure(failure, writeFailure);
+                }
+                if (failure instanceof Error error) throw error;
+                if (failure != null) throw new IllegalStateException("One or more window cleanup operations failed", failure);
             }
         });
+    }
+
+    private static Throwable appendFailure(Throwable first, Throwable next) {
+        if (first == null) return next;
+        first.addSuppressed(next);
+        return first;
     }
 
     void updateStatusJson(Window window) {

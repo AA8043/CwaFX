@@ -6,6 +6,7 @@ import org.a8043.cwaFX.BeanKey;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 /**
  * Registry of FXML pages available to windows in the application.
@@ -17,6 +18,14 @@ public class PageRegistry {
         String normalizedName = normalize(name);
         PageDefinition definition = new PageDefinition(normalizedName,
             Objects.requireNonNull(node, "The page node must not be null."), controller);
+        if (pages.putIfAbsent(normalizedName, definition) != null) {
+            throw new IllegalStateException("A page named '" + normalizedName + "' is already registered.");
+        }
+    }
+
+    public void registerFactory(String name, Supplier<PageDefinition> factory) {
+        String normalizedName = normalize(name);
+        PageDefinition definition = new PageDefinition(normalizedName, factory);
         if (pages.putIfAbsent(normalizedName, definition) != null) {
             throw new IllegalStateException("A page named '" + normalizedName + "' is already registered.");
         }

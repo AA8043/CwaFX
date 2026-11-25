@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -83,11 +84,53 @@ class WindowNavigationTest {
         assertThrows(IllegalStateException.class, () -> registry.register("home", new Rectangle(), new TestPage()));
     }
 
+    @Test
+    void factoryPagesAreIndependentAcrossWindows() {
+        PageRegistry registry = new PageRegistry();
+        AtomicInteger created = new AtomicInteger();
+        registry.registerFactory("home", () -> new PageDefinition("home", new Rectangle(),
+            new TestPage(created.incrementAndGet())));
+        AtomicReference<Node> firstDisplayed = new AtomicReference<>();
+        AtomicReference<Node> secondDisplayed = new AtomicReference<>();
+        WindowNavigation first = new WindowNavigation(registry, firstDisplayed::set);
+        WindowNavigation second = new WindowNavigation(registry, secondDisplayed::set);
+
+        first.navigate("home", null);
+        second.navigate("home", null);
+
+        assertNotSame(firstDisplayed.get(), secondDisplayed.get());
+        assertEquals(2, created.get());
+    }
+
+    @Test
+    void failedNavigationLeavesCurrentPageAndHistoryUnchanged() {
+        PageRegistry registry = new PageRegistry();
+        TestPage home = new TestPage();
+        TestPage failing = new TestPage();
+        failing.failOnNavigate = true;
+        Node homeNode = new Rectangle();
+        registry.register("home", homeNode, home);
+        registry.register("failing", new Rectangle(), failing);
+        AtomicReference<Node> displayed = new AtomicReference<>();
+        WindowNavigation navigation = new WindowNavigation(registry, displayed::set);
+        navigation.navigate("home", null);
+
+        assertThrows(IllegalStateException.class, () -> navigation.navigate("failing", null));
+        assertSame(homeNode, displayed.get());
+        assertFalse(navigation.canGoBack());
+    }
+
     private static final class TestPage implements Page<Object> {
         private final List<Object> parameters = new ArrayList<>();
+        private final int id;
+        private boolean failOnNavigate;
+
+        private TestPage() { this(0); }
+        private TestPage(int id) { this.id = id; }
 
         @Override
         public void onNavigate(Object parameter) {
+            if (failOnNavigate) throw new IllegalStateException("navigation failure");
             parameters.add(parameter);
         }
     }

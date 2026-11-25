@@ -57,12 +57,12 @@ public class Window {
             this::displayContent);
 
         stage.widthProperty().addListener((obs, oldVal, newVal) -> {
-            windowCreator.updateStatusJson(this);
             status.setWidth(newVal.doubleValue());
+            windowCreator.updateStatusJson(this);
         });
         stage.heightProperty().addListener((obs, oldVal, newVal) -> {
-            windowCreator.updateStatusJson(this);
             status.setHeight(newVal.doubleValue());
+            windowCreator.updateStatusJson(this);
         });
         stage.xProperty().addListener((obs, oldVal, newVal) -> {
             status.setX(newVal.doubleValue());
@@ -77,15 +77,12 @@ public class Window {
             windowCreator.updateStatusJson(this);
         });
 
-        windowCreator.getContext().getBean(KeyMappings.class, "KeyMappings")
-            .getKeyMappings().forEach(keyMapping -> scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-                if (keyMapping.getKey().match(event)) {
-                    if (keyMapping.getOnlyIn() != null && scene.getFocusOwner() != keyMapping.getOnlyIn()) {
-                        return;
-                    }
-                    windowCreator.getContext().getCwaFX().notifyEvent(new KeyPressEvent(keyMapping.getName()));
-                }
-            }));
+        KeyMappings keyMappings = windowCreator.getContext().getBean(KeyMappings.class, "KeyMappings");
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> keyMappings.getKeyMappings().stream()
+            .filter(mapping -> mapping.getKey().match(event))
+            .filter(mapping -> mapping.getOnlyIn() == null || scene.getFocusOwner() == mapping.getOnlyIn())
+            .forEach(mapping -> windowCreator.getContext().getCwaFX()
+                .notifyEvent(new KeyPressEvent(mapping.getName()))));
 
         stage.setScene(scene);
         updateStyle();
@@ -121,12 +118,20 @@ public class Window {
     }
 
     private void displayContent(Node node) {
+        if (node == null) {
+            pane.getChildren().clear();
+            return;
+        }
         Objects.requireNonNull(node, "The node to display must not be null.");
         if (pane.getChildren().isEmpty()) {
             pane.getChildren().add(node);
         } else {
             pane.getChildren().set(0, node);
         }
+    }
+
+    void closeNavigation() {
+        navigation.close();
     }
 
     private static final Duration MODAL_OPEN_DURATION  = Duration.millis(220);
