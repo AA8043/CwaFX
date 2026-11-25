@@ -18,13 +18,30 @@ public class FXApp extends Application {
 
     @Override
     public void start(Stage stage) {
-        I18n.load(CwaFX.getInstance().getClazz(),
-            Locale.forLanguageTag(CwaFX.getInstance().getConfig().getDefaultLanguage()));
-        CwaFX.getInstance().getFxLoadLatch().countDown();
+        CwaFX cwaFX = CwaFX.getInstance();
+        try {
+            I18n.load(cwaFX.getClazz(), Locale.forLanguageTag(cwaFX.getConfig().getDefaultLanguage()));
+            cwaFX.signalFxLoaded();
+        } catch (Throwable throwable) {
+            cwaFX.signalFxLoadFailure(throwable);
+            javafx.application.Platform.exit();
+            if (throwable instanceof RuntimeException runtimeException) throw runtimeException;
+            if (throwable instanceof Error error) throw error;
+            throw new IllegalStateException("Unable to initialize JavaFX", throwable);
+        }
     }
 
     @Override
     public void stop() {
-        CwaFX.getInstance().notifyEvent(new DestroyEvent());
+        CwaFX cwaFX = CwaFX.getInstance();
+        if (cwaFX.isFxStartupPending()) {
+            cwaFX.signalFxLoadFailure(new IllegalStateException("JavaFX stopped before application startup completed"));
+        }
+        CwaPlatform.markFxUnavailable();
+        try {
+            cwaFX.notifyEvent(new DestroyEvent());
+        } finally {
+            cwaFX.signalFxStopped();
+        }
     }
 }

@@ -13,4 +13,6 @@ public class AppConfig {
     private String defaultLanguage = Locale.getDefault().toLanguageTag();
     private int taskThreadPoolSize = 2;
     private File settingsBaseDir = new File(".");
+    private boolean cancelTasksOnShutdown = true;
+    private boolean backupCorruptSettings = true;
 }

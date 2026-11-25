@@ -1,13 +1,12 @@
 package org.a8043.cwaFX;
 
-import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import org.a8043.cwaFX.annotations.bean.OnFXThread;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -21,28 +20,28 @@ public class Util {
 
     public static void invokeMethod(Method method, Object object, Object... args) {
         method.setAccessible(true);
-        CountDownLatch latch = new CountDownLatch(1);
-
-        Runnable runnable = () -> {
-            try {
-                method.invoke(object, (Object[]) args);
-            } catch (Exception e) {
-                log.error("Error invoking method: {}", method.getName(), e);
-            } finally {
-                latch.countDown();
-            }
-        };
-
-        if (method.isAnnotationPresent(OnFXThread.class) && !Platform.isFxApplicationThread()) {
-            Platform.runLater(runnable);
+        Runnable invocation = () -> invoke(method, object, args);
+        if (method.isAnnotationPresent(OnFXThread.class)
+            && !javafx.application.Platform.isFxApplicationThread()) {
+            CwaPlatform.runOnFxThread(() -> {
+                invocation.run();
+                return null;
+            });
         } else {
-            runnable.run();
+            invocation.run();
         }
+    }
 
+    private static void invoke(Method method, Object object, Object[] args) {
         try {
-            latch.await();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            method.invoke(object, args);
+        } catch (InvocationTargetException exception) {
+            Throwable cause = exception.getCause() == null ? exception : exception.getCause();
+            if (cause instanceof RuntimeException runtimeException) throw runtimeException;
+            if (cause instanceof Error error) throw error;
+            throw new IllegalStateException("Error invoking method " + method, cause);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("Error invoking method " + method, exception);
         }
     }
 }
