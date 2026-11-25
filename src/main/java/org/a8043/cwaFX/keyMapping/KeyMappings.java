@@ -1,10 +1,10 @@
 package org.a8043.cwaFX.keyMapping;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.json.JSONObject;
 import javafx.scene.input.KeyCombination;
 import lombok.Getter;
 import org.a8043.cwaFX.CwaFX;
+import org.a8043.cwaFX.JsonFileStore;
 import org.a8043.cwaFX.events.DestroyEvent;
 
 import java.io.File;
@@ -20,15 +20,18 @@ public class KeyMappings {
 
     public KeyMappings(CwaFX cwaFX) {
         file = new File(cwaFX.getConfig().getSettingsBaseDir(), "keyMappings.json");
-        if (file.exists()) {
-            json = new JSONObject(FileUtil.readUtf8String(file));
-        } else {
-            json = new JSONObject();
+        JSONObject loaded = JsonFileStore.read(file, cwaFX, KeyMapping.class);
+        try {
+            for (String name : loaded.keySet()) KeyCombination.valueOf(loaded.getStr(name));
+        } catch (RuntimeException failure) {
+            JsonFileStore.reportCorruption(file, cwaFX, KeyMapping.class, failure);
+            loaded = new JSONObject();
         }
+        json = loaded;
 
         cwaFX.addOnEvent(e -> {
             if (e instanceof DestroyEvent) {
-                FileUtil.writeUtf8String(json.toString(), file);
+                JsonFileStore.write(file, json.toString());
             }
         });
     }
