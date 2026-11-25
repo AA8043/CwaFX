@@ -78,18 +78,28 @@ public class MaterialTabPane extends VBox {
                 if (c.wasAdded()) {
                     for (Tab tab : c.getAddedSubList()) {
                         createTabButton(tab);
+                        tab.contentProperty().addListener((obs, oldContent, newContent) -> {
+                            if (tab == getSelectedTab()) updateContent(newContent);
+                        });
                     }
                 }
                 if (c.wasRemoved()) {
                     for (Tab tab : c.getRemoved()) {
                         Button btn = tabButtonMap.remove(tab);
                         if (btn != null) tabBox.getChildren().remove(btn);
+                        if (tab == getSelectedTab()) {
+                            int index = Math.min(Math.max(0, c.getFrom()), tabs.size() - 1);
+                            selectedTab.set(tabs.isEmpty() ? null : tabs.get(index));
+                        }
                     }
                 }
             }
-            if (getSelectedTab() == null && !tabs.isEmpty()) {
+            if ((getSelectedTab() == null || !tabs.contains(getSelectedTab())) && !tabs.isEmpty()) {
                 selectTab(tabs.getFirst(), false);
+            } else if (tabs.isEmpty()) {
+                selectedTab.set(null);
             }
+            syncSelectedTab();
         });
 
         selectedTab.addListener((obs, oldTab, newTab) -> {
@@ -122,6 +132,9 @@ public class MaterialTabPane extends VBox {
 
         tabButtonMap.put(tab, btn);
         tabBox.getChildren().add(btn);
+        btn.widthProperty().addListener((obs, oldWidth, newWidth) -> {
+            if (newWidth.doubleValue() > 0 && tab == getSelectedTab()) animateIndicatorTo(btn, false);
+        });
 
         if (tabs.size() == 1) {
             selectTab(tab, false);
@@ -137,7 +150,7 @@ public class MaterialTabPane extends VBox {
         double targetWidth = targetBtn.getWidth();
 
         if (targetWidth == 0) {
-            Platform.runLater(() -> animateIndicatorTo(targetBtn, false));
+            indicator.setVisible(false);
             return;
         }
 
@@ -181,7 +194,28 @@ public class MaterialTabPane extends VBox {
     }
 
     public void selectTab(Tab tab, boolean animate) {
+        if (tab != null && !tabs.contains(tab)) {
+            throw new IllegalArgumentException("The selected tab is not part of this pane.");
+        }
         this.selectedTab.set(tab);
+        if (tab != null) {
+            Button button = tabButtonMap.get(tab);
+            if (button != null) animateIndicatorTo(button, animate);
+        }
+    }
+
+    private void syncSelectedTab() {
+        Tab selected = getSelectedTab();
+        for (Map.Entry<Tab, Button> entry : tabButtonMap.entrySet()) {
+            entry.getValue().pseudoClassStateChanged(PseudoClass.getPseudoClass("selected"), entry.getKey() == selected);
+        }
+        if (selected == null) {
+            contentArea.getChildren().clear();
+            indicator.setVisible(false);
+        } else {
+            updateContent(selected.getContent());
+            animateIndicatorTo(tabButtonMap.get(selected), false);
+        }
     }
 
     public ObservableList<Tab> getTabs() {

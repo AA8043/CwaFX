@@ -24,6 +24,11 @@ public class TextFormItem extends FormItem {
     }
 
     @Override
+    protected Object captureInput(Node control) {
+        return ((MaterialTextField) control).getText();
+    }
+
+    @Override
     protected void writeValue(Node control, Object value) {
         ((MaterialTextField) control).setText(value == null ? "" : String.valueOf(value));
     }

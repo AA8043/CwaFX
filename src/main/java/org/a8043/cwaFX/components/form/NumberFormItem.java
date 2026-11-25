@@ -22,4 +22,9 @@ public class NumberFormItem extends TextFormItem {
             return invalidValue("form.validation.number");
         }
     }
+
+    @Override
+    protected Object captureInput(Node control) {
+        return ((MaterialTextField) control).getText();
+    }
 }

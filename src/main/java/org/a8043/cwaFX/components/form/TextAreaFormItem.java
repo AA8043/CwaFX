@@ -23,6 +23,11 @@ public class TextAreaFormItem extends FormItem {
     }
 
     @Override
+    protected Object captureInput(Node control) {
+        return ((TextArea) control).getText();
+    }
+
+    @Override
     protected void writeValue(Node control, Object value) {
         ((TextArea) control).setText(value instanceof String text ? text : "");
     }

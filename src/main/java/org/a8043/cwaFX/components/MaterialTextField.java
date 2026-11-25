@@ -259,6 +259,32 @@ public class MaterialTextField extends Region {
         this.text.set(text);
     }
 
+    public int getCaretPosition() {
+        return textField == null ? 0 : textField.getCaretPosition();
+    }
+
+    public int getAnchor() {
+        return textField == null ? 0 : textField.getAnchor();
+    }
+
+    public boolean isInputFocused() {
+        return textField != null && textField.isFocused();
+    }
+
+    public void selectInputRange(int anchor, int caretPosition) {
+        if (textField != null) {
+            textField.selectRange(Math.min(anchor, textField.getLength()),
+                Math.min(caretPosition, textField.getLength()));
+        }
+    }
+
+    public void restoreInputSelection(int anchor, int caretPosition, boolean focused) {
+        if (textField == null) return;
+        textField.selectRange(Math.min(anchor, textField.getLength()),
+            Math.min(caretPosition, textField.getLength()));
+        if (focused) textField.requestFocus();
+    }
+
     public ObjectProperty<Type> typeProperty() {
         return type;
     }

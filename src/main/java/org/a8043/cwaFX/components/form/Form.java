@@ -10,10 +10,12 @@ import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.a8043.cwaFX.I18n;
+import org.a8043.cwaFX.components.MaterialTextField;
 import org.a8043.cwaFX.window.Window;
 import org.a8043.cwaFX.window.WindowCreator;
 
@@ -169,9 +171,9 @@ public class Form extends VBox {
     }
 
     private void rebuild() {
-        Map<FormItem, Object> currentValues = new IdentityHashMap<>();
+        Map<FormItem, EditorState> currentValues = new IdentityHashMap<>();
         renderedItems.forEach((item, rendered) ->
-            currentValues.put(item, item.readInput(rendered.control()).value()));
+            currentValues.put(item, captureState(item, rendered.control())));
         renderedItems.clear();
 
         List<Node> rows = new ArrayList<>(items.size() + 1);
@@ -181,9 +183,9 @@ public class Form extends VBox {
             String helperText = resolve(item.getHelperTextKey());
             Node control = item.createControl(label, helperText);
             Node row = item.createRow(control, label, helperText);
-            Object currentValue = currentValues.get(item);
-            if (currentValue != null) {
-                item.writeValue(control, currentValue);
+            EditorState currentValue = currentValues.get(item);
+            if (currentValue != null && currentValue.value() != null) {
+                item.writeValue(control, currentValue.value());
             }
             renderedItems.put(item, new RenderedItem(row, control));
             item.setControl(control);
@@ -191,6 +193,34 @@ public class Form extends VBox {
         }
         rows.add(submitButton);
         getChildren().setAll(rows);
+        for (Map.Entry<FormItem, EditorState> entry : currentValues.entrySet()) {
+            RenderedItem rendered = renderedItems.get(entry.getKey());
+            if (rendered != null) restoreState(rendered.control(), entry.getValue());
+        }
+    }
+
+    private static EditorState captureState(FormItem item, Node control) {
+        Object value = item.captureInput(control);
+        if (control instanceof MaterialTextField textField) {
+            return new EditorState(value, textField.getAnchor(), textField.getCaretPosition(),
+                textField.isInputFocused());
+        }
+        if (control instanceof TextArea textArea) {
+            return new EditorState(value, textArea.getAnchor(), textArea.getCaretPosition(), textArea.isFocused());
+        }
+        return new EditorState(value, 0, 0, control.isFocused());
+    }
+
+    private static void restoreState(Node control, EditorState state) {
+        if (control instanceof MaterialTextField textField) {
+            textField.restoreInputSelection(state.anchor(), state.caretPosition(), state.focused());
+        } else if (control instanceof TextArea textArea) {
+            textArea.selectRange(Math.min(state.anchor(), textArea.getLength()),
+                Math.min(state.caretPosition(), textArea.getLength()));
+            if (state.focused()) textArea.requestFocus();
+        } else if (state.focused()) {
+            control.requestFocus();
+        }
     }
 
     private void validateRequirements(FormItem item) {
@@ -217,5 +247,8 @@ public class Form extends VBox {
     }
 
     private record RenderedItem(Node row, Node control) {
+    }
+
+    private record EditorState(Object value, int anchor, int caretPosition, boolean focused) {
     }
 }

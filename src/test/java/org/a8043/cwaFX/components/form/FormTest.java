@@ -244,6 +244,33 @@ class FormTest {
         });
     }
 
+    @Test
+    void numberInputRebuildPreservesInvalidTextAndCaret() throws Exception {
+        onFx(() -> {
+            Form form = new Form();
+            NumberFormItem item = new NumberFormItem();
+            form.getItems().add(item);
+
+            MaterialTextField original = (MaterialTextField) item.getControl();
+            original.setText("12x");
+            original.selectInputRange(2, 2);
+            item.setHelperTextKey("updated.helper");
+
+            MaterialTextField rebuilt = (MaterialTextField) item.getControl();
+            assertNotSame(original, rebuilt);
+            assertEquals("12x", rebuilt.getText());
+            assertEquals(2, rebuilt.getCaretPosition());
+
+            for (String text : new String[]{"-", "", "12.5"}) {
+                rebuilt.setText(text);
+                item.setLabelKey("updated.label." + text.length());
+                rebuilt = (MaterialTextField) item.getControl();
+                assertEquals(text, rebuilt.getText());
+            }
+            return null;
+        });
+    }
+
     public static class FxmlController {
         @FXML
         private Form form;

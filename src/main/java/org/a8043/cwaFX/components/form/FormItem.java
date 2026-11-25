@@ -57,6 +57,11 @@ public abstract class FormItem {
      */
     protected abstract InputValue readInput(Node control);
 
+    /** Captures the editable representation so a configuration rebuild does not lose invalid input. */
+    protected Object captureInput(Node control) {
+        return readInput(control).value();
+    }
+
     /**
      * Restores a previously read value after the item is rebuilt.
      */
