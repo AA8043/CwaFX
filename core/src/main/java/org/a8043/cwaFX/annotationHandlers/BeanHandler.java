@@ -4,15 +4,14 @@ import com.google.auto.service.AutoService;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.a8043.cwaFX.AppContext;
-import org.a8043.cwaFX.BeanKey;
 import org.a8043.cwaFX.FieldAccessor;
 import org.a8043.cwaFX.Util;
 import org.a8043.cwaFX.annotations.bean.*;
 import org.a8043.cwaFX.events.*;
 import org.a8043.cwaFX.userEvent.UserEventWrapper;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -68,7 +67,7 @@ public class BeanHandler implements AnnotationHandler<Bean> {
     }
 
     public static void preparePageBean(Class<?> clazz, Object bean, AppContext context) {
-        for (java.lang.reflect.Field field : context.getClasses().getFields(clazz, Autowired.class)) {
+        for (Field field : context.getClasses().getFields(clazz, Autowired.class)) {
             Autowired annotation = field.getAnnotation(Autowired.class);
             boolean explicitName = !annotation.name().isEmpty();
             String name = explicitName ? annotation.name() : field.getName();
@@ -78,7 +77,7 @@ public class BeanHandler implements AnnotationHandler<Bean> {
             }
             if (dependency == null) {
                 throw new IllegalStateException("Unresolved @Autowired page dependency "
-                    + clazz.getName() + "." + field.getName() + " named '" + name + "'");
+                                                + clazz.getName() + "." + field.getName() + " named '" + name + "'");
             }
             new FieldAccessor(field, bean).set(dependency);
         }
@@ -89,7 +88,7 @@ public class BeanHandler implements AnnotationHandler<Bean> {
         Util.getMethods(clazz, PreDestroy.class).forEach(method -> Util.invokeMethod(method, bean));
     }
 
-    private static void injectField(java.lang.reflect.Field field, Object bean, AppContext context) {
+    private static void injectField(Field field, Object bean, AppContext context) {
         Autowired annotation = field.getAnnotation(Autowired.class);
         boolean explicitName = !annotation.name().isEmpty();
         String dependencyName = explicitName ? annotation.name() : field.getName();
@@ -112,7 +111,7 @@ public class BeanHandler implements AnnotationHandler<Bean> {
         for (Map.Entry<FieldAccessor, AppContext.PendingDependency> entry : context.pendingInjections().entrySet()) {
             FieldAccessor accessor = entry.getKey();
             AppContext.PendingDependency pending = entry.getValue();
-            java.lang.reflect.Field field = accessor.getField();
+            Field field = accessor.getField();
             if (!newBean.getKey().getClazz().equals(field.getType())) continue;
 
             boolean exactName = newBean.getKey().getName().equalsIgnoreCase(pending.name());

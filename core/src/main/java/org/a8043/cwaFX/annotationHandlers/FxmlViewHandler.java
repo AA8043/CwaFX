@@ -4,6 +4,7 @@ import cn.hutool.core.io.resource.ResourceUtil;
 import com.google.auto.service.AutoService;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import org.a8043.cwaFX.AppContext;
 import org.a8043.cwaFX.BeanKey;
 import org.a8043.cwaFX.I18n;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 
 @AutoService(AnnotationHandler.class)
 public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
@@ -28,7 +30,7 @@ public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
             : ResourceUtil.getResource(annotation.fxml());
         String name = annotation.value().isEmpty()
             ? (beanEvent.getKey().getName() == null || beanEvent.getKey().getName().isEmpty()
-                ? clazz.getSimpleName() : beanEvent.getKey().getName()) + "Node"
+            ? clazz.getSimpleName() : beanEvent.getKey().getName()) + "Node"
             : annotation.value();
         PageRegistry registry = context.getBean(PageRegistry.class, "PageRegistry");
         Object templateController = beanEvent.getObject();
@@ -46,10 +48,10 @@ public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
                 throw failure;
             }
         }));
-        context.addBean(new BeanKey(javafx.scene.Node.class, name), template.getNode());
+        context.addBean(new BeanKey(Node.class, name), template.getNode());
     }
 
-    private static <T> T onFxThread(java.util.function.Supplier<T> supplier) {
+    private static <T> T onFxThread(Supplier<T> supplier) {
         if (Platform.isFxApplicationThread()) return supplier.get();
         CompletableFuture<T> result = new CompletableFuture<>();
         try {

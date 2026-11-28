@@ -2,6 +2,7 @@
 
 /.gradle
 /build/
+/core/build/
 
 # IDEA
 
