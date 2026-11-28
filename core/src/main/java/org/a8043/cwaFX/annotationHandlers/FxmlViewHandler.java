@@ -14,7 +14,6 @@ import org.a8043.cwaFX.events.NewBeanEvent;
 import org.a8043.cwaFX.navigation.PageDefinition;
 import org.a8043.cwaFX.navigation.PageRegistry;
 
-import java.io.IOException;
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -80,7 +79,7 @@ public class FxmlViewHandler implements AnnotationHandler<FxmlView> {
             loader.setResources(I18n.getBundle());
             loader.setControllerFactory(type -> controller);
             return new PageDefinition(name, loader.load(), controller);
-        } catch (IOException exception) {
+        } catch (Exception exception) {
             throw new IllegalStateException("Unable to load FXML page '" + name + "'", exception);
         }
     }
