@@ -3,6 +3,7 @@
 /.gradle
 /build/
 /core/build/
+/annotation-processor/build
 
 # IDEA
 

@@ -30,6 +30,7 @@ repositories {
 
 dependencies {
     implementation("io.github.aa8043:cwafx:{版本}")
+    annotationProcessor("io.github.aa8043:cwafx-annotation-processor:{版本}")
 }
 ```
 
@@ -41,6 +42,12 @@ dependencies {
     <groupId>io.github.aa8043</groupId>
     <artifactId>cwafx</artifactId>
     <version>{版本}</version>
+</dependency>
+<dependency>
+    <groupId>io.github.aa8043</groupId>
+    <artifactId>cwafx-annotation-processor</artifactId>
+    <version>{版本}</version>
+    <scope>provided</scope>
 </dependency>
 ```
 
